@@ -1,0 +1,95 @@
+// NomadFree — esquema inicial.
+// Favoritos NÃO têm modelo aqui: nesta fase são locais ao navegador (localStorage).
+
+generator client {
+  provider   = "prisma-client-js"
+  engineType = "client"
+  previewFeatures = ["queryCompiler", "driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Category {
+  BUDGET_DESTINATION
+  ACCOMMODATION_EXCHANGE
+  VOLUNTEERING
+  REMOTE_FRIENDLY
+}
+
+enum Region {
+  SOUTH_AMERICA
+  CENTRAL_AMERICA_CARIBBEAN
+  EUROPE
+  ASIA
+  AFRICA
+}
+
+/// ESTIMATE = valor ilustrativo/estimado. VERIFIED = conferido em fonte oficial (com data em verifiedAt).
+enum PriceKind {
+  ESTIMATE
+  VERIFIED
+}
+
+model Destination {
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  name              String
+  country           String
+  region            Region
+  categories        Category[]
+  summary           String
+  description       String
+  /// Custo diário estimado em centavos (unidade menor da moeda).
+  dailyBudgetMinor  Int
+  currency          String   @default("BRL") @db.VarChar(3)
+  priceKind         PriceKind @default(ESTIMATE)
+  verifiedAt        DateTime?
+  sourceLabel       String
+  /// Nota ilustrativa de 1 a 5 para trabalho remoto.
+  remoteWorkScore   Int
+  internetNotes     String
+  coworkingNotes    String
+  bestSeason        String
+  imageKey          String
+  isDemo            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  opportunities Opportunity[]
+
+  @@index([region])
+  @@index([dailyBudgetMinor])
+}
+
+model Opportunity {
+  id                 String   @id @default(cuid())
+  slug               String   @unique
+  title              String
+  category           Category
+  destinationId      String
+  summary            String
+  conditions         String
+  hoursPerWeek       Int?
+  /// Custo diário estimado para quem participa (alimentação, transporte etc.), em centavos.
+  dailyCostMinor     Int
+  /// Taxa única (ex.: associação a plataforma), em centavos, quando aplicável.
+  upfrontFeeMinor    Int?
+  currency           String   @default("BRL") @db.VarChar(3)
+  priceKind          PriceKind @default(ESTIMATE)
+  verifiedAt         DateTime?
+  sourceLabel        String
+  externalUrl        String?
+  imageKey           String
+  isDemo             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+
+  @@index([destinationId])
+  @@index([category])
+  @@index([dailyCostMinor])
+}
