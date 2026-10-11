@@ -7,6 +7,7 @@ import { Badge } from "./ui/badge";
 import { DailyCost } from "./price";
 import { cn } from "@/lib/utils";
 
+/** Card vertical com foto em destaque e título sobre a imagem; detalhes logo abaixo. */
 export function CatalogCard({
   item,
   className,
@@ -22,18 +23,20 @@ export function CatalogCard({
   return (
     <article
       className={cn(
-        "group bg-paper relative flex flex-col overflow-hidden rounded-[var(--radius-card)]",
+        "group bg-paper border-line hover:border-fjord relative flex flex-col overflow-hidden rounded-[var(--radius-card)] border transition-colors",
         className,
       )}
       data-testid="catalog-card"
       data-kind={item.kind}
     >
-      <div className={cn("relative aspect-[4/3] overflow-hidden", imageClassName)}>
+      <div className={cn("relative aspect-[4/5] overflow-hidden", imageClassName)}>
         <CatalogImage
           imageKey={item.imageKey}
-          alt={`Ilustração de paisagem representando ${item.locationLabel}`}
-          className="transition-transform duration-500 group-hover:scale-[1.03] motion-reduce:transition-none"
+          photoSrc={item.photoSrc}
+          subject={item.locationLabel}
+          className="transition-transform duration-700 group-hover:scale-105 motion-reduce:transition-none"
         />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-black/35" />
         <div className="absolute inset-x-0 top-0 flex items-start justify-between p-3">
           <Badge tone="dark">{item.kind === "destination" ? "Destino" : "Oportunidade"}</Badge>
           <FavoriteButton
@@ -43,10 +46,8 @@ export function CatalogCard({
             className="relative z-20"
           />
         </div>
-      </div>
-      <div className="flex flex-1 flex-col gap-3 p-5">
-        <div>
-          <Heading className="text-xl leading-tight font-bold tracking-tight">
+        <div className="absolute inset-x-0 bottom-0 p-5 text-white">
+          <Heading className="display-caps text-[1.65rem] leading-[0.95] font-bold">
             <Link
               href={item.href}
               className="after:absolute after:inset-0 after:z-10 after:content-['']"
@@ -54,9 +55,11 @@ export function CatalogCard({
               {item.title}
             </Link>
           </Heading>
-          <p className="text-ink-soft mt-1 text-sm">{item.locationLabel}</p>
+          <p className="mt-2 text-sm text-white/80">{item.locationLabel}</p>
         </div>
-        <p className="text-ink-soft text-sm leading-relaxed">{item.summary}</p>
+      </div>
+      <div className="flex flex-1 flex-col gap-3 p-5">
+        <p className="text-ink-soft line-clamp-3 text-sm leading-relaxed">{item.summary}</p>
         <ul className="flex flex-wrap gap-1.5" aria-label="Categorias">
           {item.categories.map((c) => (
             <li key={c}>

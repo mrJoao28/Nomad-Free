@@ -6,7 +6,7 @@ import type { CatalogFilters, SortOrder } from "./catalog";
 
 export const MAX_BUDGET_REAIS = 1000;
 
-const SORT_ORDERS = ["relevancia", "menor-custo", "maior-custo"] as const;
+const SORT_ORDERS = ["relevancia", "menor-custo", "maior-custo", "melhor-trabalho-remoto"] as const;
 
 const categorySlug = z.enum(Object.values(CATEGORY_SLUGS) as [string, ...string[]]);
 const regionSlug = z.enum(Object.values(REGION_SLUGS) as [string, ...string[]]);

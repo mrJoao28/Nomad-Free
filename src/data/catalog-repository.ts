@@ -1,7 +1,8 @@
 import "server-only";
-import type { PrismaClient } from "@prisma/client";
+import type { Destination, Prisma, PrismaClient } from "@prisma/client";
 import { getDb } from "@/server/db";
 import { slugSchema } from "@/domain/search-params";
+import { findFirstPhoto } from "@/lib/photos";
 import type { CatalogItem, DestinationDetail, OpportunityDetail, Region } from "@/domain/types";
 
 /**
@@ -9,13 +10,17 @@ import type { CatalogItem, DestinationDetail, OpportunityDetail, Region } from "
  * para facilitar testes de integração com um banco isolado.
  */
 
-export async function listCatalogItems(db: PrismaClient = getDb()): Promise<CatalogItem[]> {
-  const [destinations, opportunities] = await Promise.all([
-    db.destination.findMany({ orderBy: { name: "asc" } }),
-    db.opportunity.findMany({ include: { destination: true }, orderBy: { title: "asc" } }),
-  ]);
+type DestinationRow = Destination;
+type OpportunityRow = Prisma.OpportunityGetPayload<{ include: { destination: true } }>;
 
-  const fromDestinations: CatalogItem[] = destinations.map((d) => ({
+/** Foto real (se existir) da chave; oportunidades usam a foto do destino como alternativa. */
+function photoProps(...imageKeys: string[]): { photoSrc?: string } {
+  const photoSrc = findFirstPhoto(...imageKeys);
+  return photoSrc ? { photoSrc } : {};
+}
+
+function toDestinationItem(d: DestinationRow): CatalogItem {
+  return {
     kind: "destination",
     slug: d.slug,
     href: `/destinos/${d.slug}`,
@@ -29,9 +34,12 @@ export async function listCatalogItems(db: PrismaClient = getDb()): Promise<Cata
     priceKind: d.priceKind,
     imageKey: d.imageKey,
     remoteWorkScore: d.remoteWorkScore,
-  }));
+    ...photoProps(d.imageKey),
+  };
+}
 
-  const fromOpportunities: CatalogItem[] = opportunities.map((o) => ({
+function toOpportunityItem(o: OpportunityRow): CatalogItem {
+  return {
     kind: "opportunity",
     slug: o.slug,
     href: `/oportunidades/${o.slug}`,
@@ -44,9 +52,16 @@ export async function listCatalogItems(db: PrismaClient = getDb()): Promise<Cata
     currency: o.currency,
     priceKind: o.priceKind,
     imageKey: o.imageKey,
-  }));
+    ...photoProps(o.imageKey, o.destination.imageKey),
+  };
+}
 
-  return [...fromDestinations, ...fromOpportunities];
+export async function listCatalogItems(db: PrismaClient = getDb()): Promise<CatalogItem[]> {
+  const [destinations, opportunities] = await Promise.all([
+    db.destination.findMany({ orderBy: { name: "asc" } }),
+    db.opportunity.findMany({ include: { destination: true }, orderBy: { title: "asc" } }),
+  ]);
+  return [...destinations.map(toDestinationItem), ...opportunities.map(toOpportunityItem)];
 }
 
 export async function getDestinationBySlug(
@@ -55,6 +70,32 @@ export async function getDestinationBySlug(
 ): Promise<DestinationDetail | null> {
   if (!slugSchema.safeParse(slug).success) return null;
   return db.destination.findUnique({ where: { slug } });
+}
+
+/** Destinos para comparação, na mesma ordem dos slugs recebidos (slugs inexistentes são omitidos). */
+export async function listDestinationsBySlugs(
+  slugs: string[],
+  db: PrismaClient = getDb(),
+): Promise<DestinationDetail[]> {
+  const valid = slugs.filter((s) => slugSchema.safeParse(s).success);
+  if (valid.length === 0) return [];
+  const rows = await db.destination.findMany({ where: { slug: { in: valid } } });
+  const ordered: DestinationDetail[] = [];
+  for (const slug of valid) {
+    const row = rows.find((r) => r.slug === slug);
+    if (row) ordered.push(row);
+  }
+  return ordered;
+}
+
+/** Opções leves (slug, nome, país) para os seletores do comparador. */
+export async function listDestinationOptions(
+  db: PrismaClient = getDb(),
+): Promise<{ slug: string; name: string; country: string }[]> {
+  return db.destination.findMany({
+    select: { slug: true, name: true, country: true },
+    orderBy: { name: "asc" },
+  });
 }
 
 export async function getOpportunityBySlug(
@@ -75,6 +116,7 @@ export async function getOpportunityBySlug(
       name: destination.name,
       country: destination.country,
       region: destination.region as Region,
+      imageKey: destination.imageKey,
     },
   };
 }
@@ -88,20 +130,7 @@ export async function listOpportunitiesForDestination(
     include: { destination: true },
     orderBy: { dailyCostMinor: "asc" },
   });
-  return rows.map((o) => ({
-    kind: "opportunity",
-    slug: o.slug,
-    href: `/oportunidades/${o.slug}`,
-    title: o.title,
-    locationLabel: `${o.destination.name}, ${o.destination.country}`,
-    summary: o.summary,
-    categories: [o.category],
-    region: o.destination.region,
-    dailyCostMinor: o.dailyCostMinor,
-    currency: o.currency,
-    priceKind: o.priceKind,
-    imageKey: o.imageKey,
-  }));
+  return rows.map(toOpportunityItem);
 }
 
 export async function listRelatedOpportunities(

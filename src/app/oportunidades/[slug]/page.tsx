@@ -4,6 +4,7 @@ import Link from "next/link";
 import { cache } from "react";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { ThemeScope } from "@/components/theme-scope";
 import { CatalogImage } from "@/components/catalog-image";
 import { CatalogCard } from "@/components/catalog-card";
 import { FavoriteButton } from "@/components/favorite-button";
@@ -12,6 +13,7 @@ import { DemoNotice } from "@/components/price";
 import { getOpportunityBySlug, listRelatedOpportunities } from "@/data/catalog-repository";
 import { CATEGORY_LABELS, PRICE_KIND_LABELS, REGION_LABELS } from "@/domain/labels";
 import { formatMoney } from "@/domain/money";
+import { findFirstPhoto } from "@/lib/photos";
 
 export const dynamic = "force-dynamic";
 
@@ -37,14 +39,15 @@ export default async function OpportunityPage({ params }: Props) {
   const place = `${o.destination.name}, ${o.destination.country}`;
 
   return (
-    <>
+    <ThemeScope paletteKey={o.destination.slug}>
       <SiteHeader />
       <main id="conteudo" className="mx-auto max-w-7xl px-5 sm:px-8">
         <div className="relative overflow-hidden rounded-[1.75rem]">
           <div className="aspect-[16/9] max-h-[30rem] min-h-64 w-full">
             <CatalogImage
               imageKey={o.imageKey}
-              alt={`Ilustração de paisagem representando ${place}`}
+              photoSrc={findFirstPhoto(o.imageKey, o.destination.imageKey)}
+              subject={place}
               priority
               sizes="100vw"
             />
@@ -65,7 +68,7 @@ export default async function OpportunityPage({ params }: Props) {
               </Link>{" "}
               · {REGION_LABELS[o.destination.region]}
             </p>
-            <h1 className="display mt-2 text-[clamp(2.4rem,6vw,5.5rem)]">{o.title}</h1>
+            <h1 className="display display-caps mt-2 text-[clamp(2.4rem,6vw,5rem)]">{o.title}</h1>
             <p className="mt-5">
               <Badge>{CATEGORY_LABELS[o.category]}</Badge>
             </p>
@@ -81,7 +84,7 @@ export default async function OpportunityPage({ params }: Props) {
           </div>
 
           <aside
-            className="bg-paper h-fit rounded-[var(--radius-card)] p-6"
+            className="bg-paper border-line h-fit rounded-[var(--radius-card)] border p-6"
             aria-labelledby="custos-title"
           >
             <h2 id="custos-title" className="text-xl font-bold">
@@ -143,6 +146,6 @@ export default async function OpportunityPage({ params }: Props) {
         <DemoNotice className="text-ink-soft mt-12 max-w-3xl text-sm leading-relaxed" />
       </main>
       <SiteFooter />
-    </>
+    </ThemeScope>
   );
 }

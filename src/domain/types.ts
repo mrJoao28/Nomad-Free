@@ -38,6 +38,8 @@ export interface CatalogItem {
   currency: string;
   priceKind: PriceKind;
   imageKey: string;
+  /** Caminho público da foto real, quando existir (resolvido no servidor). */
+  photoSrc?: string;
   /** Apenas destinos. */
   remoteWorkScore?: number;
 }
@@ -81,5 +83,5 @@ export interface OpportunityDetail {
   externalUrl: string | null;
   imageKey: string;
   isDemo: boolean;
-  destination: { slug: string; name: string; country: string; region: Region };
+  destination: { slug: string; name: string; country: string; region: Region; imageKey: string };
 }

@@ -26,8 +26,8 @@ export function FavoriteButton({
       aria-label={active ? `Remover ${title} dos favoritos` : `Salvar ${title} nos favoritos`}
       data-testid="favorite-button"
       className={cn(
-        "bg-paper/90 text-ink inline-flex h-10 w-10 items-center justify-center rounded-full backdrop-blur transition-colors hover:bg-white",
-        active && "bg-fjord hover:bg-fjord-deep text-white",
+        "inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur transition-colors hover:bg-black/65",
+        active && "bg-fjord text-on-accent hover:bg-fjord-deep",
         className,
       )}
     >

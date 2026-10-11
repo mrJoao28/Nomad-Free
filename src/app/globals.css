@@ -1,15 +1,22 @@
 @import "tailwindcss";
 
+/*
+ * Tema escuro e cinematográfico. Estes valores são o tema padrão; páginas de lugar sobrescrevem
+ * as mesmas variáveis com a paleta do local (ver src/domain/palettes.ts e <ThemeScope>).
+ *   stone = fundo · paper = superfícies · ink = texto · fjord = cor de destaque
+ */
 @theme {
-  --color-stone: #e6e2da;
-  --color-paper: #f1eee8;
-  --color-ink: #1f2326;
-  --color-ink-soft: #4a5055;
-  --color-fjord: #2f5d62;
-  --color-fjord-deep: #234549;
+  --color-stone: #0d1014;
+  --color-paper: #151a20;
+  --color-ink: #f3efe8;
+  --color-ink-soft: #b4b9be;
+  --color-fjord: #3fb6a8;
+  --color-fjord-deep: #67c9bd;
+  --color-accent2: #e0a458;
+  --color-on-accent: #0b0f12;
   --color-moss: #5b6b4e;
   --color-ochre: #8f6422;
-  --color-line: #cfc9bd;
+  --color-line: #262d35;
   --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
   --font-display: "Avenir Next Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --radius-card: 1.25rem;
@@ -18,6 +25,7 @@
 html {
   background: var(--color-stone);
   color: var(--color-ink);
+  color-scheme: dark;
   scroll-behavior: smooth;
 }
 
@@ -42,6 +50,13 @@ body {
   font-weight: 700;
   letter-spacing: -0.03em;
   line-height: 0.92;
+}
+
+/* Títulos grandes em caixa alta, como nas referências de design. */
+.display-caps {
+  text-transform: uppercase;
+  letter-spacing: -0.015em;
+  line-height: 0.9;
 }
 
 .hero-rise {

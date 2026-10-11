@@ -7,7 +7,7 @@ export function Badge({
 }: React.HTMLAttributes<HTMLSpanElement> & { tone?: "neutral" | "dark" | "warn" }) {
   const tones = {
     neutral: "bg-paper text-ink border border-line",
-    dark: "bg-ink/85 text-paper",
+    dark: "bg-black/55 text-white backdrop-blur",
     warn: "bg-[#f3e4c3] text-[#5c3f0e] border border-[#d9bf86]",
   } as const;
   return (

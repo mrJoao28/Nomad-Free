@@ -1,6 +1,6 @@
 import { BUDGET_CURRENCY, type CatalogItem, type Category, type Region } from "./types";
 
-export type SortOrder = "relevancia" | "menor-custo" | "maior-custo";
+export type SortOrder = "relevancia" | "menor-custo" | "maior-custo" | "melhor-trabalho-remoto";
 
 export interface CatalogFilters {
   q?: string;
@@ -63,6 +63,14 @@ export function sortItems(items: CatalogItem[], order: SortOrder, q?: string): C
       return copy.sort((a, b) => a.dailyCostMinor - b.dailyCostMinor || byTitle(a, b));
     case "maior-custo":
       return copy.sort((a, b) => b.dailyCostMinor - a.dailyCostMinor || byTitle(a, b));
+    case "melhor-trabalho-remoto":
+      // Só destinos têm nota; oportunidades vão para o fim. Desempate: mais barato, depois título.
+      return copy.sort(
+        (a, b) =>
+          (b.remoteWorkScore ?? -1) - (a.remoteWorkScore ?? -1) ||
+          a.dailyCostMinor - b.dailyCostMinor ||
+          byTitle(a, b),
+      );
     case "relevancia":
     default:
       return copy.sort((a, b) => relevanceScore(b, q) - relevanceScore(a, q) || byTitle(a, b));

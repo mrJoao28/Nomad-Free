@@ -89,6 +89,7 @@ export function SearchForm({
             <option value="relevancia">Relevância</option>
             <option value="menor-custo">Menor custo diário</option>
             <option value="maior-custo">Maior custo diário</option>
+            <option value="melhor-trabalho-remoto">Melhor nota para trabalho remoto</option>
           </Select>
         </Field>
       ) : null}
