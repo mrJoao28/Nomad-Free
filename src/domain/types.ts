@@ -1,17 +1,24 @@
-export const CATEGORIES = [
-  "BUDGET_DESTINATION",
-  "ACCOMMODATION_EXCHANGE",
-  "VOLUNTEERING",
-  "REMOTE_FRIENDLY",
+export const TAGS = [
+  "BEGINNERS",
+  "FAMILY",
+  "ADVANCED",
+  "FREERIDE",
+  "LARGE_AREA",
+  "HIGH_ALTITUDE",
+  "APRES_SKI",
+  "LUXURY",
+  "BUDGET",
+  "PARK",
 ] as const;
-export type Category = (typeof CATEGORIES)[number];
+export type Tag = (typeof TAGS)[number];
 
 export const REGIONS = [
-  "SOUTH_AMERICA",
-  "CENTRAL_AMERICA_CARIBBEAN",
-  "EUROPE",
+  "ALPS",
+  "EUROPE_OTHER",
+  "NORTH_AMERICA",
   "ASIA",
-  "AFRICA",
+  "SOUTH_AMERICA",
+  "OCEANIA",
 ] as const;
 export type Region = (typeof REGIONS)[number];
 
@@ -20,68 +27,54 @@ export type PriceKind = "ESTIMATE" | "VERIFIED";
 /** Moeda de referência dos filtros de orçamento. */
 export const BUDGET_CURRENCY = "BRL";
 
-export type ItemKind = "destination" | "opportunity";
-
-/** Visão unificada usada em listagens, cards, filtros e ordenação. */
-export interface CatalogItem {
-  kind: ItemKind;
+/** Visão resumida usada em listagens, cards, filtros e ordenação. */
+export interface ResortItem {
   slug: string;
   href: string;
-  title: string;
-  /** Ex.: "Medellín, Colômbia" */
+  name: string;
+  country: string;
+  /** Ex.: "Zermatt, Suíça" */
   locationLabel: string;
   summary: string;
-  categories: Category[];
+  tags: Tag[];
   region: Region;
-  /** Custo diário estimado em centavos. */
+  mountainRange: string;
+  curatedRank: number;
+  /** Altitude máxima aproximada, em metros. */
+  topElevationM: number;
+  areaLabel: string;
+  /** Tamanho relativo de 1 a 5. */
+  sizeRank: number;
+  seasonLabel: string;
+  /** Custo diário estimado por pessoa, em centavos. */
   dailyCostMinor: number;
   currency: string;
   priceKind: PriceKind;
   imageKey: string;
   /** Caminho público da foto real, quando existir (resolvido no servidor). */
   photoSrc?: string;
-  /** Apenas destinos. */
-  remoteWorkScore?: number;
 }
 
-export interface DestinationDetail {
+export interface ResortDetail {
   id: string;
   slug: string;
   name: string;
   country: string;
   region: Region;
-  categories: Category[];
+  mountainRange: string;
+  tags: Tag[];
   summary: string;
   description: string;
+  curatedRank: number;
+  topElevationM: number;
+  areaLabel: string;
+  sizeRank: number;
+  seasonLabel: string;
   dailyBudgetMinor: number;
   currency: string;
   priceKind: PriceKind;
   verifiedAt: Date | null;
   sourceLabel: string;
-  remoteWorkScore: number;
-  internetNotes: string;
-  coworkingNotes: string;
-  bestSeason: string;
   imageKey: string;
   isDemo: boolean;
-}
-
-export interface OpportunityDetail {
-  id: string;
-  slug: string;
-  title: string;
-  category: Category;
-  summary: string;
-  conditions: string;
-  hoursPerWeek: number | null;
-  dailyCostMinor: number;
-  upfrontFeeMinor: number | null;
-  currency: string;
-  priceKind: PriceKind;
-  verifiedAt: Date | null;
-  sourceLabel: string;
-  externalUrl: string | null;
-  imageKey: string;
-  isDemo: boolean;
-  destination: { slug: string; name: string; country: string; region: Region; imageKey: string };
 }

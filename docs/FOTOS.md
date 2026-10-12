@@ -1,29 +1,47 @@
 # Fotos e cores por lugar
 
-O site usa foto real quando existe `public/img/photos/<chave>.jpg` e, sem foto, a ilustração SVG
-(`public/img/<chave>.svg`). Nada quebra se faltar foto.
+O site usa a foto real quando existe `public/img/photos/<chave>.jpg` (a chave é o slug da estação) e,
+sem foto, mostra uma silhueta de montanhas própria de cada estação. Nada quebra se faltar foto.
 
-## Baixar fotos livres automaticamente (Wikimedia Commons)
+## Baixar as fotos (uma vez)
+
+Rode dentro do contêiner (tem internet e Node 22; os arquivos aparecem na sua pasta):
 
 ```powershell
-node scripts/fetch-photos.mjs --list     # só mostra as melhores candidatas de cada lugar
-node scripts/fetch-photos.mjs            # baixa a melhor foto de cada chave
+docker compose exec app node scripts/fetch-photos.mjs --dry   # só mostra o que seria escolhido
+docker compose exec app node scripts/fetch-photos.mjs         # baixa as fotos que faltam
 ```
 
-- Escolhe sozinho, entre "Featured pictures" e "Quality images", fotos em paisagem e alta resolução
-  com licença livre (CC BY, CC BY-SA, CC0, domínio público). Ignora mapas, bandeiras e logos.
-- Grava autor, licença e link em `public/img/photos/credits.json`; o rodapé mostra os créditos.
-- Chaves: `hero-home` (fundo da página inicial) e os nove destinos, em `scripts/photo-sources.json`.
-- Não gostou de uma foto? Procure outra no Commons, copie o título (ex.: `File:Exemplo.jpg`),
-  cole em `"file"` na chave e rode: `node scripts/fetch-photos.mjs --only=cusco-peru --force`.
-- Outras opções: `--only=chave1,chave2`, `--force` (baixar de novo).
+Depois abra `scripts/revisao-fotos.html` no navegador: ele mostra **todas as fotos de uma vez**, com
+autor, licença e link, e lista as estações que ficaram sem foto.
 
-Respeite as licenças: CC BY e CC BY-SA exigem atribuição (o rodapé cuida disso).
-As oportunidades (`op-*`) usam a foto do destino onde acontecem.
+### Como a foto de cada estação é escolhida
+
+Não há busca por texto (foi o que trouxe fotos erradas). O script usa:
+
+1. a imagem principal do artigo da estação na Wikipédia (campo `wiki` em `scripts/photo-sources.json`);
+2. se ela não servir, as outras imagens do mesmo artigo;
+3. se faltar, as fotos da categoria do Commons (campo opcional `commonsCategory`).
+
+Cada candidata precisa estar no Wikimedia Commons com licença livre (CC BY, CC BY-SA, CC0 ou domínio
+público), ser JPEG em paisagem e ter pelo menos 1600 px de largura (prefere 2400 px ou mais). Mapas de
+pistas, logos, bandeiras e aeronaves são descartados, e **a mesma foto nunca é usada em duas estações**.
+Se nada servir, a estação fica sem foto (e aparece no relatório) em vez de receber uma foto errada.
+
+### Trocar ou completar uma foto
+
+1. No Wikimedia Commons, ache uma foto boa daquele lugar e copie o título (ex.: `File:Exemplo.jpg`).
+2. Cole em `"file"` na estação, em `scripts/photo-sources.json`.
+3. Rode `docker compose exec app node scripts/fetch-photos.mjs --only=zermatt --force`.
+
+Se o título do artigo em `"wiki"` estiver errado (relatório diz "nenhuma imagem encontrada"), corrija-o.
+Outras opções: `--only=chave1,chave2`, `--force`, `--report`.
+
+Respeite as licenças: CC BY e CC BY-SA exigem atribuição (o rodapé do site mostra os créditos).
 
 ## Cores de cada lugar
 
-Cada destino tem uma paleta (fundo, superfícies, linhas e dois destaques) em
-`src/domain/palettes.ts`, aplicada em toda a página do destino e das suas oportunidades.
-Para mudar as cores de um lugar, edite os valores dele; o teste `tests/unit/palettes.test.ts`
-garante contraste legível. Destino novo sem paleta usa a paleta padrão (verde-água).
+Cada país tem uma paleta (fundo de "noite na montanha" e dois destaques inspirados na paisagem e na
+cultura local) em `src/domain/palettes.ts`, aplicada em toda a página da estação. Países sem paleta usam
+a da região. O teste `tests/unit/palettes.test.ts` garante contraste legível e que todo país do seed
+tenha paleta.

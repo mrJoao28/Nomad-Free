@@ -2,15 +2,15 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { seedDatabase } from "../../prisma/seed-lib";
-import { destinations, opportunities } from "../../prisma/seed-data";
+import { resorts } from "../../prisma/seed-data";
 import {
-  getDestinationBySlug,
-  getOpportunityBySlug,
-  listCatalogItems,
-  listOpportunitiesForDestination,
-  listRelatedOpportunities,
+  getResortBySlug,
+  listRelatedResorts,
+  listResortOptions,
+  listResorts,
+  listResortsBySlugs,
 } from "@/data/catalog-repository";
-import { searchCatalog } from "@/domain/catalog";
+import { searchResorts } from "@/domain/catalog";
 
 const url = process.env.DATABASE_URL ?? "";
 const dbName = url ? new URL(url).pathname.replace(/^\//, "") : "";
@@ -35,95 +35,66 @@ afterAll(async () => {
 describe("seed", () => {
   it("é idempotente e não duplica registros", async () => {
     await seedDatabase(db);
-    expect(await db.destination.count()).toBe(destinations.length);
-    expect(await db.opportunity.count()).toBe(opportunities.length);
+    expect(await db.resort.count()).toBe(resorts.length);
+    expect(resorts).toHaveLength(100);
   });
 
   it("marca todos os registros como demonstração e estimativa", async () => {
     expect(
-      await db.destination.count({ where: { OR: [{ isDemo: false }, { priceKind: "VERIFIED" }] } }),
-    ).toBe(0);
-    expect(
-      await db.opportunity.count({ where: { OR: [{ isDemo: false }, { priceKind: "VERIFIED" }] } }),
+      await db.resort.count({ where: { OR: [{ isDemo: false }, { priceKind: "VERIFIED" }] } }),
     ).toBe(0);
   });
 });
 
 describe("catalog-repository", () => {
-  it("lista destinos e oportunidades como itens unificados", async () => {
-    const items = await listCatalogItems(db);
-    expect(items).toHaveLength(destinations.length + opportunities.length);
-    expect(items.filter((i) => i.kind === "destination")).toHaveLength(destinations.length);
+  it("lista as 100 estações na ordem da curadoria", async () => {
+    const items = await listResorts(db);
+    expect(items).toHaveLength(100);
+    expect(items.map((i) => i.curatedRank)).toEqual(Array.from({ length: 100 }, (_, i) => i + 1));
+    expect(items[0]?.slug).toBe("zermatt");
+    expect(items[0]?.href).toBe("/destinos/zermatt");
   });
 
-  it("busca destino por slug", async () => {
-    const d = await getDestinationBySlug("medellin-colombia", db);
-    expect(d?.name).toBe("Medellín");
-    expect(d?.dailyBudgetMinor).toBe(26000);
-    expect(d?.currency).toBe("BRL");
+  it("busca estação por slug e rejeita slugs inválidos", async () => {
+    const r = await getResortBySlug("zermatt", db);
+    expect(r?.name).toBe("Zermatt");
+    expect(r?.topElevationM).toBe(3883);
+    expect(r?.tags).toContain("HIGH_ALTITUDE");
+    expect(await getResortBySlug("nao-existe", db)).toBeNull();
+    expect(await getResortBySlug("../etc/passwd", db)).toBeNull();
   });
 
-  it("retorna null para slug inexistente ou inválido", async () => {
-    expect(await getDestinationBySlug("nao-existe", db)).toBeNull();
-    expect(await getDestinationBySlug("../x", db)).toBeNull();
-    expect(await getOpportunityBySlug("nao-existe", db)).toBeNull();
+  it("devolve estações para comparação na ordem pedida, omitindo as inexistentes", async () => {
+    const list = await listResortsBySlugs(["chamonix", "nao-existe", "zermatt", "INVALIDO"], db);
+    expect(list.map((r) => r.slug)).toEqual(["chamonix", "zermatt"]);
+    expect(await listResortsBySlugs([], db)).toEqual([]);
   });
 
-  it("busca oportunidade com seu destino", async () => {
-    const o = await getOpportunityBySlug("troca-atendimento-cafe-cusco", db);
-    expect(o?.category).toBe("ACCOMMODATION_EXCHANGE");
-    expect(o?.destination.slug).toBe("cusco-peru");
+  it("lista opções ordenadas por nome", async () => {
+    const options = await listResortOptions(db);
+    expect(options).toHaveLength(100);
+    const names = options.map((o) => o.name);
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
   });
 
-  it("lista oportunidades de um destino ordenadas por custo", async () => {
-    const list = await listOpportunitiesForDestination("cusco-peru", db);
-    expect(list.map((i) => i.slug)).toEqual([
-      "troca-atendimento-cafe-cusco",
-      "voluntariado-ingles-escola-cusco",
-    ]);
+  it("relacionadas excluem a própria estação e priorizam o mesmo país", async () => {
+    const related = await listRelatedResorts("zermatt", "Suíça", "ALPS", 3, db);
+    expect(related).toHaveLength(3);
+    expect(related.map((r) => r.slug)).not.toContain("zermatt");
+    expect(related.every((r) => r.country === "Suíça")).toBe(true);
   });
 
-  it("relacionadas excluem a própria oportunidade", async () => {
-    const list = await listRelatedOpportunities("troca-atendimento-cafe-cusco", "cusco-peru", db);
-    expect(list.map((i) => i.slug)).toEqual(["voluntariado-ingles-escola-cusco"]);
-  });
-
-  it("filtros de domínio funcionam sobre dados do banco", async () => {
-    const items = await listCatalogItems(db);
-    const result = searchCatalog(
-      items,
-      { category: "VOLUNTEERING", maxDailyMinor: 7000 },
-      "menor-custo",
-    );
-    expect(result.length).toBeGreaterThan(0);
+  it("filtra os dados reais por região, perfil e orçamento", async () => {
+    const items = await listResorts(db);
+    expect(searchResorts(items, { region: "ALPS" }, "curadoria")).toHaveLength(48);
+    const luxury = searchResorts(items, { tag: "LUXURY" }, "maior-custo");
+    expect(luxury.length).toBeGreaterThan(5);
+    expect(luxury.every((i) => i.tags.includes("LUXURY"))).toBe(true);
+    const cheap = searchResorts(items, { maxDailyMinor: 70000 }, "menor-custo");
+    expect(cheap.length).toBeGreaterThan(0);
+    expect(cheap.every((i) => i.dailyCostMinor <= 70000)).toBe(true);
     expect(
-      result.every((i) => i.categories.includes("VOLUNTEERING") && i.dailyCostMinor <= 7000),
+      searchResorts(items, { q: "japao" }, "curadoria").every((i) => i.country === "Japão"),
     ).toBe(true);
-    expect(result.map((i) => i.dailyCostMinor)).toEqual(
-      [...result.map((i) => i.dailyCostMinor)].sort((a, b) => a - b),
-    );
-  });
-
-  it("garante slugs únicos no banco", async () => {
-    await expect(
-      db.destination.create({
-        data: {
-          slug: "medellin-colombia",
-          name: "x",
-          country: "x",
-          region: "ASIA",
-          categories: [],
-          summary: "x",
-          description: "x",
-          dailyBudgetMinor: 1,
-          sourceLabel: "x",
-          remoteWorkScore: 1,
-          internetNotes: "x",
-          coworkingNotes: "x",
-          bestSeason: "x",
-          imageKey: "x",
-        },
-      }),
-    ).rejects.toThrow();
   });
 });

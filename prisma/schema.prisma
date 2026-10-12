@@ -1,4 +1,4 @@
-// NomadFree — esquema inicial.
+// NomadFree — estações de esqui.
 // Favoritos NÃO têm modelo aqui: nesta fase são locais ao navegador (localStorage).
 
 generator client {
@@ -12,19 +12,26 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Category {
-  BUDGET_DESTINATION
-  ACCOMMODATION_EXCHANGE
-  VOLUNTEERING
-  REMOTE_FRIENDLY
+enum Tag {
+  FAMILY
+  BEGINNERS
+  ADVANCED
+  FREERIDE
+  LARGE_AREA
+  HIGH_ALTITUDE
+  APRES_SKI
+  LUXURY
+  BUDGET
+  PARK
 }
 
 enum Region {
-  SOUTH_AMERICA
-  CENTRAL_AMERICA_CARIBBEAN
-  EUROPE
+  ALPS
+  EUROPE_OTHER
+  NORTH_AMERICA
   ASIA
-  AFRICA
+  SOUTH_AMERICA
+  OCEANIA
 }
 
 /// ESTIMATE = valor ilustrativo/estimado. VERIFIED = conferido em fonte oficial (com data em verifiedAt).
@@ -33,63 +40,40 @@ enum PriceKind {
   VERIFIED
 }
 
-model Destination {
-  id                String   @id @default(cuid())
-  slug              String   @unique
-  name              String
-  country           String
-  region            Region
-  categories        Category[]
-  summary           String
-  description       String
-  /// Custo diário estimado em centavos (unidade menor da moeda).
-  dailyBudgetMinor  Int
-  currency          String   @default("BRL") @db.VarChar(3)
-  priceKind         PriceKind @default(ESTIMATE)
-  verifiedAt        DateTime?
-  sourceLabel       String
-  /// Nota ilustrativa de 1 a 5 para trabalho remoto.
-  remoteWorkScore   Int
-  internetNotes     String
-  coworkingNotes    String
-  bestSeason        String
-  imageKey          String
-  isDemo            Boolean  @default(true)
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
-
-  opportunities Opportunity[]
+model Resort {
+  id               String     @id @default(cuid())
+  slug             String     @unique
+  name             String
+  country          String
+  region           Region
+  /// Cadeia de montanhas ou região (texto livre, ex.: "Alpes Penninos").
+  mountainRange    String
+  tags             Tag[]
+  summary          String
+  description      String
+  /// Posição na curadoria NomadFree (1 = primeira). Não é um ranking medido.
+  curatedRank      Int
+  /// Altitude máxima aproximada, em metros.
+  topElevationM    Int
+  /// Texto exibido, ex.: "≈ 360 km de pistas (com Cervinia)".
+  areaLabel        String
+  /// Tamanho relativo de 1 (compacta) a 5 (gigante), usado em filtros e ordenação.
+  sizeRank         Int
+  /// Temporada típica, ex.: "Dez–Abr".
+  seasonLabel      String
+  /// Custo diário estimado por pessoa em centavos (lift pass, hospedagem e refeições).
+  dailyBudgetMinor Int
+  currency         String     @default("BRL") @db.VarChar(3)
+  priceKind        PriceKind  @default(ESTIMATE)
+  verifiedAt       DateTime?
+  sourceLabel      String
+  imageKey         String
+  isDemo           Boolean    @default(true)
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
   @@index([region])
+  @@index([country])
+  @@index([curatedRank])
   @@index([dailyBudgetMinor])
-}
-
-model Opportunity {
-  id                 String   @id @default(cuid())
-  slug               String   @unique
-  title              String
-  category           Category
-  destinationId      String
-  summary            String
-  conditions         String
-  hoursPerWeek       Int?
-  /// Custo diário estimado para quem participa (alimentação, transporte etc.), em centavos.
-  dailyCostMinor     Int
-  /// Taxa única (ex.: associação a plataforma), em centavos, quando aplicável.
-  upfrontFeeMinor    Int?
-  currency           String   @default("BRL") @db.VarChar(3)
-  priceKind          PriceKind @default(ESTIMATE)
-  verifiedAt         DateTime?
-  sourceLabel        String
-  externalUrl        String?
-  imageKey           String
-  isDemo             Boolean  @default(true)
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-
-  destination Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
-
-  @@index([destinationId])
-  @@index([category])
-  @@index([dailyCostMinor])
 }

@@ -1,12 +1,406 @@
 {
-  "hero-home": { "search": "mountains lake landscape", "file": "" },
-  "medellin-colombia": { "search": "Medellín", "file": "" },
-  "cusco-peru": { "search": "Cusco", "file": "" },
-  "oaxaca-mexico": { "search": "Oaxaca", "file": "" },
-  "tbilisi-georgia": { "search": "Tbilisi", "file": "" },
-  "chiang-mai-tailandia": { "search": "Chiang Mai", "file": "" },
-  "da-nang-vietna": { "search": "Da Nang", "file": "" },
-  "florianopolis-brasil": { "search": "Florianópolis", "file": "" },
-  "cidade-do-cabo-africa-do-sul": { "search": "Cape Town", "file": "" },
-  "porto-portugal": { "search": "Porto Portugal", "file": "" }
+  "hero-home": {
+    "wiki": "Matterhorn",
+    "file": ""
+  },
+  "zermatt": {
+    "wiki": "Zermatt",
+    "file": ""
+  },
+  "chamonix": {
+    "wiki": "Chamonix",
+    "file": ""
+  },
+  "whistler-blackcomb": {
+    "wiki": "Whistler Blackcomb",
+    "file": ""
+  },
+  "vail": {
+    "wiki": "Vail Mountain",
+    "file": ""
+  },
+  "courchevel": {
+    "wiki": "Courchevel",
+    "file": ""
+  },
+  "st-anton": {
+    "wiki": "St. Anton am Arlberg",
+    "file": ""
+  },
+  "val-disere": {
+    "wiki": "Val-d'Isère",
+    "file": ""
+  },
+  "aspen-snowmass": {
+    "wiki": "Aspen Snowmass",
+    "file": ""
+  },
+  "verbier": {
+    "wiki": "Verbier",
+    "file": ""
+  },
+  "niseko": {
+    "wiki": "Niseko",
+    "file": ""
+  },
+  "cortina": {
+    "wiki": "Cortina d'Ampezzo",
+    "file": ""
+  },
+  "park-city": {
+    "wiki": "Park City Mountain Resort",
+    "file": ""
+  },
+  "kitzbuhel": {
+    "wiki": "Kitzbühel",
+    "file": ""
+  },
+  "val-thorens": {
+    "wiki": "Val Thorens",
+    "file": ""
+  },
+  "ischgl": {
+    "wiki": "Ischgl",
+    "file": ""
+  },
+  "meribel": {
+    "wiki": "Méribel",
+    "file": ""
+  },
+  "jackson-hole": {
+    "wiki": "Jackson Hole Mountain Resort",
+    "file": ""
+  },
+  "st-moritz": {
+    "wiki": "St. Moritz",
+    "file": ""
+  },
+  "lake-louise": {
+    "wiki": "Lake Louise Ski Resort",
+    "file": ""
+  },
+  "hakuba": {
+    "wiki": "Hakuba, Nagano",
+    "file": ""
+  },
+  "mammoth": {
+    "wiki": "Mammoth Mountain Ski Area",
+    "file": ""
+  },
+  "solden": {
+    "wiki": "Sölden",
+    "file": ""
+  },
+  "tignes": {
+    "wiki": "Tignes",
+    "file": ""
+  },
+  "lech-zurs": {
+    "wiki": "Lech am Arlberg",
+    "file": ""
+  },
+  "breckenridge": {
+    "wiki": "Breckenridge Ski Resort",
+    "file": ""
+  },
+  "les-arcs": {
+    "wiki": "Les Arcs",
+    "file": ""
+  },
+  "la-plagne": {
+    "wiki": "La Plagne",
+    "file": ""
+  },
+  "davos-klosters": {
+    "wiki": "Davos",
+    "file": ""
+  },
+  "laax": {
+    "wiki": "Laax",
+    "file": ""
+  },
+  "saalbach": {
+    "wiki": "Saalbach-Hinterglemm",
+    "file": ""
+  },
+  "mayrhofen": {
+    "wiki": "Mayrhofen",
+    "file": ""
+  },
+  "val-gardena": {
+    "wiki": "Val Gardena",
+    "file": ""
+  },
+  "alta-badia": {
+    "wiki": "Alta Badia",
+    "file": ""
+  },
+  "livigno": {
+    "wiki": "Livigno",
+    "file": ""
+  },
+  "cervinia": {
+    "wiki": "Breuil-Cervinia",
+    "file": ""
+  },
+  "courmayeur": {
+    "wiki": "Courmayeur",
+    "file": ""
+  },
+  "megeve": {
+    "wiki": "Megève",
+    "file": ""
+  },
+  "les-deux-alpes": {
+    "wiki": "Les Deux Alpes",
+    "file": ""
+  },
+  "alpe-dhuez": {
+    "wiki": "Alpe d'Huez",
+    "file": ""
+  },
+  "avoriaz": {
+    "wiki": "Avoriaz",
+    "file": ""
+  },
+  "morzine": {
+    "wiki": "Morzine",
+    "file": ""
+  },
+  "revelstoke": {
+    "wiki": "Revelstoke Mountain Resort",
+    "file": ""
+  },
+  "big-white": {
+    "wiki": "Big White Ski Resort",
+    "file": ""
+  },
+  "fernie": {
+    "wiki": "Fernie Alpine Resort",
+    "file": ""
+  },
+  "mont-tremblant": {
+    "wiki": "Mont Tremblant Resort",
+    "file": ""
+  },
+  "telluride": {
+    "wiki": "Telluride Ski Resort",
+    "file": ""
+  },
+  "steamboat": {
+    "wiki": "Steamboat Resort",
+    "file": ""
+  },
+  "beaver-creek": {
+    "wiki": "Beaver Creek Resort",
+    "file": ""
+  },
+  "deer-valley": {
+    "wiki": "Deer Valley",
+    "file": ""
+  },
+  "alta": {
+    "wiki": "Alta Ski Area",
+    "file": ""
+  },
+  "snowbird": {
+    "wiki": "Snowbird, Utah",
+    "file": ""
+  },
+  "big-sky": {
+    "wiki": "Big Sky Resort",
+    "file": ""
+  },
+  "palisades-tahoe": {
+    "wiki": "Palisades Tahoe",
+    "file": ""
+  },
+  "stowe": {
+    "wiki": "Stowe Mountain Resort",
+    "file": ""
+  },
+  "killington": {
+    "wiki": "Killington Ski Resort",
+    "file": ""
+  },
+  "saas-fee": {
+    "wiki": "Saas-Fee",
+    "file": ""
+  },
+  "grindelwald-wengen": {
+    "wiki": "Grindelwald",
+    "file": ""
+  },
+  "engelberg": {
+    "wiki": "Engelberg",
+    "file": ""
+  },
+  "crans-montana": {
+    "wiki": "Crans-Montana",
+    "file": ""
+  },
+  "andermatt": {
+    "wiki": "Andermatt",
+    "file": ""
+  },
+  "obergurgl": {
+    "wiki": "Obergurgl",
+    "file": ""
+  },
+  "zell-kaprun": {
+    "wiki": "Zell am See",
+    "file": ""
+  },
+  "schladming": {
+    "wiki": "Schladming",
+    "file": ""
+  },
+  "bad-gastein": {
+    "wiki": "Bad Gastein",
+    "file": ""
+  },
+  "skiwelt": {
+    "wiki": "SkiWelt Wilder Kaiser-Brixental",
+    "file": ""
+  },
+  "serfaus-fiss-ladis": {
+    "wiki": "Serfaus",
+    "file": ""
+  },
+  "madonna-di-campiglio": {
+    "wiki": "Madonna di Campiglio",
+    "file": ""
+  },
+  "via-lattea": {
+    "wiki": "Sestriere",
+    "file": ""
+  },
+  "kronplatz": {
+    "wiki": "Kronplatz",
+    "file": ""
+  },
+  "la-clusaz": {
+    "wiki": "La Clusaz",
+    "file": ""
+  },
+  "garmisch": {
+    "wiki": "Garmisch-Partenkirchen",
+    "file": ""
+  },
+  "oberstdorf": {
+    "wiki": "Oberstdorf",
+    "file": ""
+  },
+  "grandvalira": {
+    "wiki": "Grandvalira",
+    "file": ""
+  },
+  "baqueira-beret": {
+    "wiki": "Baqueira-Beret",
+    "file": ""
+  },
+  "sierra-nevada": {
+    "wiki": "Sierra Nevada Ski Station",
+    "file": ""
+  },
+  "hemsedal": {
+    "wiki": "Hemsedal",
+    "file": ""
+  },
+  "trysil": {
+    "wiki": "Trysil",
+    "file": ""
+  },
+  "are": {
+    "wiki": "Åre",
+    "file": ""
+  },
+  "levi": {
+    "wiki": "Levi, Finland",
+    "file": ""
+  },
+  "jasna": {
+    "wiki": "Jasná",
+    "file": ""
+  },
+  "bansko": {
+    "wiki": "Bansko",
+    "file": ""
+  },
+  "gudauri": {
+    "wiki": "Gudauri",
+    "file": ""
+  },
+  "nozawa-onsen": {
+    "wiki": "Nozawaonsen, Nagano",
+    "file": ""
+  },
+  "furano": {
+    "wiki": "Furano",
+    "file": ""
+  },
+  "rusutsu": {
+    "wiki": "Rusutsu",
+    "file": ""
+  },
+  "shiga-kogen": {
+    "wiki": "Shiga Kogen",
+    "file": ""
+  },
+  "myoko-kogen": {
+    "wiki": "Myōkō, Niigata",
+    "file": ""
+  },
+  "yongpyong": {
+    "wiki": "Yongpyong Resort",
+    "file": ""
+  },
+  "valle-nevado": {
+    "wiki": "Valle Nevado",
+    "file": ""
+  },
+  "portillo": {
+    "wiki": "Portillo, Chile",
+    "file": ""
+  },
+  "nevados-de-chillan": {
+    "wiki": "Nevados de Chillán",
+    "file": ""
+  },
+  "cerro-catedral": {
+    "wiki": "Cerro Catedral",
+    "file": ""
+  },
+  "las-lenas": {
+    "wiki": "Las Leñas",
+    "file": ""
+  },
+  "the-remarkables": {
+    "wiki": "The Remarkables",
+    "file": ""
+  },
+  "coronet-peak": {
+    "wiki": "Coronet Peak",
+    "file": ""
+  },
+  "cardrona": {
+    "wiki": "Cardrona Alpine Resort",
+    "file": ""
+  },
+  "mt-hutt": {
+    "wiki": "Mount Hutt",
+    "file": ""
+  },
+  "thredbo": {
+    "wiki": "Thredbo",
+    "file": ""
+  },
+  "perisher": {
+    "wiki": "Perisher Ski Resort",
+    "file": ""
+  },
+  "mt-buller": {
+    "wiki": "Mount Buller",
+    "file": ""
+  }
 }

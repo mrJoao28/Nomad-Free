@@ -4,7 +4,7 @@ import {
   findBySlug,
   normalizeText,
   relevanceScore,
-  searchCatalog,
+  searchResorts,
   sortItems,
 } from "@/domain/catalog";
 import { items } from "./fixtures";
@@ -13,7 +13,7 @@ const slugs = (list: { slug: string }[]) => list.map((i) => i.slug);
 
 describe("normalizeText", () => {
   it("remove acentos e ignora maiúsculas", () => {
-    expect(normalizeText("  MEDELLÍN ")).toBe("medellin");
+    expect(normalizeText("  Sölden — Áustria ")).toBe("solden — austria");
   });
 });
 
@@ -22,100 +22,115 @@ describe("filterItems", () => {
     expect(filterItems(items, {})).toHaveLength(items.length);
   });
 
-  it("busca por texto sem depender de acentos", () => {
-    expect(slugs(filterItems(items, { q: "medellin" }))).toEqual(["medellin", "horta-medellin"]);
-  });
-
-  it("busca por mais de um termo (qualquer termo)", () => {
-    expect(slugs(filterItems(items, { q: "horta porto" })).sort()).toEqual([
-      "horta-medellin",
-      "porto",
-    ]);
-  });
-
-  it("filtra por categoria", () => {
-    expect(slugs(filterItems(items, { category: "ACCOMMODATION_EXCHANGE" }))).toEqual([
-      "troca-cafe-cusco",
-    ]);
-  });
-
-  it("um destino pode pertencer a mais de uma categoria", () => {
-    const result = slugs(filterItems(items, { category: "BUDGET_DESTINATION" }));
-    expect(result).toEqual(["medellin", "cusco"]);
+  it("filtra por perfil", () => {
+    expect(slugs(filterItems(items, { tag: "BUDGET" }))).toEqual(["cerro-catedral", "bansko"]);
+    expect(slugs(filterItems(items, { tag: "LUXURY" }))).toEqual(["zermatt"]);
   });
 
   it("filtra por região", () => {
-    expect(slugs(filterItems(items, { region: "EUROPE" }))).toEqual(["porto"]);
-  });
-
-  it("filtra por orçamento diário máximo, inclusive o limite", () => {
-    expect(slugs(filterItems(items, { maxDailyMinor: 19000 }))).toEqual([
-      "cusco",
-      "troca-cafe-cusco",
-      "horta-medellin",
+    expect(slugs(filterItems(items, { region: "NORTH_AMERICA" }))).toEqual([
+      "whistler-blackcomb",
+      "usd-resort",
     ]);
   });
 
-  it("exclui itens em outra moeda quando há filtro de orçamento", () => {
-    expect(slugs(filterItems(items, { maxDailyMinor: 100000 }))).not.toContain("usd-item");
+  it("filtra por orçamento diário e exclui moedas diferentes da de referência", () => {
+    const result = filterItems(items, { maxDailyMinor: 150000 });
+    expect(slugs(result).sort()).toEqual(["bansko", "cerro-catedral", "niseko"]);
+    expect(slugs(result)).not.toContain("usd-resort");
+  });
+
+  it("busca sem acento por nome, país e região de montanhas", () => {
+    expect(slugs(filterItems(items, { q: "zermatt" }))).toEqual(["zermatt"]);
+    expect(slugs(filterItems(items, { q: "japao" }))).toEqual(["niseko"]);
+    expect(slugs(filterItems(items, { q: "patagonia" }))).toEqual(["cerro-catedral"]);
+  });
+
+  it("busca também no resumo", () => {
+    expect(slugs(filterItems(items, { q: "hokkaido" }))).toEqual(["niseko"]);
   });
 
   it("combina filtros", () => {
-    const result = filterItems(items, {
-      q: "cusco",
-      category: "BUDGET_DESTINATION",
-      maxDailyMinor: 20000,
-    });
-    expect(slugs(result)).toEqual(["cusco"]);
+    expect(slugs(filterItems(items, { tag: "APRES_SKI", region: "ASIA" }))).toEqual(["niseko"]);
+    expect(filterItems(items, { tag: "LUXURY", region: "ASIA" })).toEqual([]);
   });
 
-  it("retorna vazio quando nada corresponde", () => {
-    expect(filterItems(items, { q: "inexistente" })).toEqual([]);
+  it("não encontra termos inexistentes", () => {
+    expect(filterItems(items, { q: "nadaquecombine" })).toEqual([]);
+  });
+});
+
+describe("relevanceScore", () => {
+  it("dá mais peso ao nome do que ao resumo", () => {
+    const zermatt = items.find((i) => i.slug === "zermatt")!;
+    expect(relevanceScore(zermatt, "zermatt")).toBeGreaterThan(
+      relevanceScore(zermatt, "matterhorn"),
+    );
   });
 
-  it("consulta só com espaços é tratada como vazia", () => {
-    expect(filterItems(items, { q: "   " })).toHaveLength(items.length);
+  it("é zero sem termo de busca", () => {
+    expect(relevanceScore(items[0]!, "")).toBe(0);
+    expect(relevanceScore(items[0]!)).toBe(0);
   });
 });
 
 describe("sortItems", () => {
-  it("ordena por menor custo", () => {
-    expect(sortItems(items, "menor-custo").map((i) => i.dailyCostMinor)).toEqual([
-      1000, 5500, 7000, 19000, 26000, 42000,
+  it("curadoria: sem busca, segue a posição na curadoria", () => {
+    expect(slugs(sortItems(items, "curadoria"))).toEqual([
+      "zermatt",
+      "whistler-blackcomb",
+      "niseko",
+      "usd-resort",
+      "bansko",
+      "cerro-catedral",
     ]);
   });
 
-  it("ordena por maior custo", () => {
-    expect(sortItems(items, "maior-custo")[0]?.slug).toBe("porto");
+  it("curadoria: com busca, prioriza relevância e desempata pela curadoria", () => {
+    const found = filterItems(items, { q: "a" });
+    const sorted = sortItems(found, "curadoria", "bansko");
+    expect(sorted[0]?.slug).toBe("bansko");
   });
 
-  it("não modifica o array original", () => {
+  it("menor e maior custo", () => {
+    expect(slugs(sortItems(items, "menor-custo"))[0]).toBe("usd-resort");
+    expect(slugs(sortItems(items, "maior-custo"))[0]).toBe("zermatt");
+  });
+
+  it("maior altitude", () => {
+    expect(slugs(sortItems(items, "maior-altitude")).slice(0, 3)).toEqual([
+      "zermatt",
+      "usd-resort",
+      "bansko",
+    ]);
+  });
+
+  it("maior área: tamanho relativo e desempate pela curadoria", () => {
+    expect(slugs(sortItems(items, "maior-area"))).toEqual([
+      "whistler-blackcomb",
+      "zermatt",
+      "niseko",
+      "usd-resort",
+      "bansko",
+      "cerro-catedral",
+    ]);
+  });
+
+  it("não altera a lista original", () => {
     const before = slugs(items);
-    sortItems(items, "menor-custo");
+    sortItems(items, "maior-altitude");
     expect(slugs(items)).toEqual(before);
-  });
-
-  it("relevância: título pesa mais que local", () => {
-    const result = searchCatalog(items, { q: "cusco" }, "relevancia");
-    expect(result[0]?.slug).toBe("cusco");
-    expect(slugs(result)).toContain("troca-cafe-cusco");
-  });
-
-  it("relevância sem consulta coloca destinos antes de oportunidades", () => {
-    const result = sortItems(items, "relevancia");
-    expect(result.slice(0, 3).every((i) => i.kind === "destination")).toBe(true);
-  });
-
-  it("relevanceScore é 0 quando nada corresponde", () => {
-    expect(relevanceScore(items[0]!, "zzz")).toBe(0);
   });
 });
 
-describe("findBySlug", () => {
-  it("encontra por slug estável", () => {
-    expect(findBySlug(items, "porto")?.title).toBe("Porto");
+describe("searchResorts / findBySlug", () => {
+  it("aplica filtro e ordenação juntos", () => {
+    const result = searchResorts(items, { region: "NORTH_AMERICA" }, "menor-custo");
+    expect(slugs(result)).toEqual(["usd-resort", "whistler-blackcomb"]);
   });
-  it("retorna undefined para slug desconhecido", () => {
-    expect(findBySlug(items, "nao-existe")).toBeUndefined();
+
+  it("encontra por slug", () => {
+    expect(findBySlug(items, "niseko")?.name).toBe("Niseko United");
+    expect(findBySlug(items, "inexistente")).toBeUndefined();
   });
 });

@@ -5,22 +5,22 @@ import { getSiteUrl } from "@/lib/env";
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   title: {
-    default: "NomadFree — destinos acessíveis para nômades digitais",
+    default: "NomadFree — estações de esqui do mundo",
     template: "%s · NomadFree",
   },
   description:
-    "Descubra destinos econômicos, locais bons para trabalho remoto e oportunidades de hospedagem em troca de trabalho. Conteúdo atual de demonstração.",
+    "Encontre onde esquiar: 100 estações de esqui e resorts do mundo, com altitude, temporada e custo estimado. Conteúdo atual de demonstração.",
   openGraph: {
     type: "website",
     locale: "pt_BR",
     siteName: "NomadFree",
-    title: "NomadFree — destinos acessíveis para nômades digitais",
+    title: "NomadFree — estações de esqui do mundo",
     description:
-      "Destinos econômicos, locais para trabalho remoto e oportunidades de hospedagem em troca de trabalho.",
+      "100 estações de esqui e resorts do mundo, com altitude, temporada e custo estimado.",
   },
 };
 
-export const viewport: Viewport = { themeColor: "#0d1014", width: "device-width", initialScale: 1 };
+export const viewport: Viewport = { themeColor: "#0b1220", width: "device-width", initialScale: 1 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

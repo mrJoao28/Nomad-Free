@@ -5,27 +5,29 @@ import {
   MAX_COMPARE,
   parseCompareParams,
 } from "@/domain/compare";
-import type { DestinationDetail } from "@/domain/types";
+import type { ResortDetail } from "@/domain/types";
 
-function destination(overrides: Partial<DestinationDetail>): DestinationDetail {
+function resort(overrides: Partial<ResortDetail>): ResortDetail {
   return {
     id: "id",
     slug: "x",
     name: "X",
     country: "País",
-    region: "SOUTH_AMERICA",
-    categories: ["REMOTE_FRIENDLY"],
+    region: "ALPS",
+    mountainRange: "Alpes",
+    tags: ["FAMILY"],
     summary: "",
     description: "",
-    dailyBudgetMinor: 20000,
+    curatedRank: 1,
+    topElevationM: 3000,
+    areaLabel: "",
+    sizeRank: 3,
+    seasonLabel: "Dez–Abr",
+    dailyBudgetMinor: 160000,
     currency: "BRL",
     priceKind: "ESTIMATE",
     verifiedAt: null,
     sourceLabel: "demo",
-    remoteWorkScore: 3,
-    internetNotes: "",
-    coworkingNotes: "",
-    bestSeason: "",
     imageKey: "x",
     isDemo: true,
     ...overrides,
@@ -42,7 +44,7 @@ describe("parseCompareParams", () => {
   });
 
   it("aceita um slug único e vários slugs repetidos", () => {
-    expect(parseCompareParams({ d: "medellin-colombia" }).slugs).toEqual(["medellin-colombia"]);
+    expect(parseCompareParams({ d: "zermatt" }).slugs).toEqual(["zermatt"]);
     expect(parseCompareParams({ d: ["a", "b", "c"] }).slugs).toEqual(["a", "b", "c"]);
   });
 
@@ -61,7 +63,7 @@ describe("parseCompareParams", () => {
 
   it("valida a quantidade de dias", () => {
     expect(parseCompareParams({ dias: "15" }).days).toBe(15);
-    for (const bad of ["0", "-3", "366", "abc", "2.5"]) {
+    for (const bad of ["0", "-3", "61", "abc", "2.5"]) {
       const r = parseCompareParams({ dias: bad });
       expect(r.days).toBe(DEFAULT_COMPARE_DAYS);
       expect(r.ignored).toEqual(["dias"]);
@@ -70,34 +72,37 @@ describe("parseCompareParams", () => {
 });
 
 describe("buildComparison", () => {
-  const a = destination({ slug: "a", dailyBudgetMinor: 26000, remoteWorkScore: 5 });
-  const b = destination({ slug: "b", dailyBudgetMinor: 19000, remoteWorkScore: 3 });
+  const a = resort({ slug: "a", dailyBudgetMinor: 300000, topElevationM: 3883, sizeRank: 4 });
+  const b = resort({ slug: "b", dailyBudgetMinor: 150000, topElevationM: 2000, sizeRank: 2 });
 
-  it("calcula o orçamento da estadia com inteiros", () => {
-    const budget = buildComparison([a, b], 10)[0]?.budget;
-    expect(budget?.expectedMinor).toBe(260000);
-    expect(budget?.lowMinor).toBe(208000);
-    expect(budget?.highMinor).toBe(338000);
+  it("calcula o orçamento da viagem com inteiros", () => {
+    const budget = buildComparison([a, b], 7)[0]?.budget;
+    expect(budget?.expectedMinor).toBe(2100000);
+    expect(budget?.lowMinor).toBe(1680000);
+    expect(budget?.highMinor).toBe(2730000);
   });
 
-  it("destaca o mais barato e a melhor nota remota", () => {
-    const [ra, rb] = buildComparison([a, b], 30);
-    expect(ra).toMatchObject({ isCheapest: false, isBestRemote: true });
-    expect(rb).toMatchObject({ isCheapest: true, isBestRemote: false });
+  it("destaca a mais barata, a mais alta e a de maior área", () => {
+    const [ra, rb] = buildComparison([a, b], 7);
+    expect(ra).toMatchObject({ isCheapest: false, isHighest: true, isLargest: true });
+    expect(rb).toMatchObject({ isCheapest: true, isHighest: false, isLargest: false });
   });
 
-  it("marca empates", () => {
-    const rows = buildComparison([a, destination({ slug: "c", remoteWorkScore: 5 })], 7);
-    expect(rows.map((r) => r.isBestRemote)).toEqual([true, true]);
+  it("marca empates parciais, mas não destaca quando todas empatam", () => {
+    const c = resort({ slug: "c", dailyBudgetMinor: 150000, topElevationM: 2000, sizeRank: 2 });
+    const rows = buildComparison([a, b, c], 7);
+    expect(rows.map((r) => r.isCheapest)).toEqual([false, true, true]);
+    const equal = buildComparison([resort({ slug: "p" }), resort({ slug: "q" })], 7);
+    expect(equal.every((r) => !r.isCheapest && !r.isHighest && !r.isLargest)).toBe(true);
   });
 
   it("não destaca custo quando as moedas diferem", () => {
-    const rows = buildComparison([a, destination({ slug: "u", currency: "USD" })], 7);
+    const rows = buildComparison([a, resort({ slug: "u", currency: "USD" })], 7);
     expect(rows.every((r) => !r.isCheapest)).toBe(true);
   });
 
-  it("não destaca nada com um único destino", () => {
+  it("não destaca nada com uma única estação", () => {
     const [only] = buildComparison([a], 7);
-    expect(only).toMatchObject({ isCheapest: false, isBestRemote: false });
+    expect(only).toMatchObject({ isCheapest: false, isHighest: false, isLargest: false });
   });
 });

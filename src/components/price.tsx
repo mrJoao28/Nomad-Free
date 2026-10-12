@@ -16,7 +16,10 @@ export function DailyCost({
   return (
     <p className={className}>
       <span className="font-semibold">{formatMoney(minor, currency)}</span>
-      <span className="text-ink-soft"> por dia · {PRICE_KIND_LABELS[kind].toLowerCase()}</span>
+      <span className="text-ink-soft">
+        {" "}
+        por pessoa/dia · {PRICE_KIND_LABELS[kind].toLowerCase()}
+      </span>
     </p>
   );
 }
@@ -24,8 +27,9 @@ export function DailyCost({
 export function DemoNotice({ className }: { className?: string }) {
   return (
     <p className={className} data-testid="demo-notice">
-      Dados de demonstração: valores, notas e condições são ilustrativos, não foram verificados e
-      não representam preços ou disponibilidade reais. Confirme sempre com a fonte oficial.
+      Dados de demonstração: altitudes, áreas, temporadas e custos são aproximados e ilustrativos,
+      não foram verificados em tempo real e não representam preços ou condições reais. Confirme
+      sempre no site oficial da estação.
     </p>
   );
 }

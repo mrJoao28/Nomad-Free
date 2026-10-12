@@ -1,26 +1,32 @@
 import { z } from "zod";
-import { CATEGORY_SLUGS, REGION_SLUGS } from "./labels";
-import { CATEGORIES, REGIONS, type Category, type Region } from "./types";
+import { REGION_SLUGS, TAG_SLUGS } from "./labels";
+import { REGIONS, TAGS, type Region, type Tag } from "./types";
 import { reaisToMinor } from "./money";
-import type { CatalogFilters, SortOrder } from "./catalog";
+import type { ResortFilters, SortOrder } from "./catalog";
 
-export const MAX_BUDGET_REAIS = 1000;
+export const MAX_BUDGET_REAIS = 10000;
 
-const SORT_ORDERS = ["relevancia", "menor-custo", "maior-custo", "melhor-trabalho-remoto"] as const;
+const SORT_ORDERS = [
+  "curadoria",
+  "menor-custo",
+  "maior-custo",
+  "maior-altitude",
+  "maior-area",
+] as const;
 
-const categorySlug = z.enum(Object.values(CATEGORY_SLUGS) as [string, ...string[]]);
+const tagSlug = z.enum(Object.values(TAG_SLUGS) as [string, ...string[]]);
 const regionSlug = z.enum(Object.values(REGION_SLUGS) as [string, ...string[]]);
 
 const rawSchema = {
   q: z.string().trim().max(80),
-  categoria: categorySlug,
+  perfil: tagSlug,
   regiao: regionSlug,
   orcamento: z.coerce.number().int().min(0).max(MAX_BUDGET_REAIS),
   ordem: z.enum(SORT_ORDERS),
 };
 
 export interface ExploreQuery {
-  filters: CatalogFilters;
+  filters: ResortFilters;
   order: SortOrder;
   /** Parâmetros presentes porém inválidos (ignorados). */
   ignored: string[];
@@ -55,24 +61,22 @@ export function parseExploreParams(params: RawParams): ExploreQuery {
   };
 
   const q = pick("q");
-  const categoria = pick("categoria");
+  const perfil = pick("perfil");
   const regiao = pick("regiao");
   const orcamento = pick("orcamento");
   const ordem = pick("ordem");
 
-  const category: Category | undefined = categoria
-    ? slugToEnum(CATEGORY_SLUGS, categoria, CATEGORIES)
-    : undefined;
+  const tag: Tag | undefined = perfil ? slugToEnum(TAG_SLUGS, perfil, TAGS) : undefined;
   const region: Region | undefined = regiao ? slugToEnum(REGION_SLUGS, regiao, REGIONS) : undefined;
 
   return {
     filters: {
       q: q || undefined,
-      category,
+      tag,
       region,
       maxDailyMinor: orcamento !== undefined ? reaisToMinor(orcamento) : undefined,
     },
-    order: ordem ?? "relevancia",
+    order: ordem ?? "curadoria",
     ignored,
   };
 }

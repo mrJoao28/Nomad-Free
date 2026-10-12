@@ -11,9 +11,7 @@ async function main() {
   const db = new PrismaClient({ adapter: new PrismaPg({ connectionString }) });
   try {
     const result = await seedDatabase(db);
-    console.log(
-      `Seed concluído (DADOS DE DEMONSTRAÇÃO): ${result.destinations} destinos, ${result.opportunities} oportunidades.`,
-    );
+    console.log(`Seed concluído (DADOS DE DEMONSTRAÇÃO): ${result.resorts} estações de esqui.`);
   } finally {
     await db.$disconnect();
   }

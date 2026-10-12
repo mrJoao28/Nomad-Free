@@ -5,8 +5,9 @@ import { cn } from "@/lib/utils";
 const links = [
   { href: "/explorar", label: "Explorar" },
   { href: "/comparar", label: "Comparar" },
-  { href: "/explorar?categoria=troca-hospedagem", label: "Trocas de hospedagem" },
-  { href: "/explorar?categoria=voluntariado", label: "Voluntariado" },
+  { href: "/explorar?regiao=alpes", label: "Alpes" },
+  { href: "/explorar?regiao=america-do-norte", label: "América do Norte" },
+  { href: "/explorar?regiao=america-do-sul", label: "Andes" },
 ];
 
 const linkClass =

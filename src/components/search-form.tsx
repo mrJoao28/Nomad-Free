@@ -1,13 +1,13 @@
 import { Button } from "./ui/button";
 import { Field, Select, TextInput } from "./ui/field";
-import { CATEGORIES, REGIONS } from "@/domain/types";
-import { CATEGORY_LABELS, CATEGORY_SLUGS, REGION_LABELS, REGION_SLUGS } from "@/domain/labels";
+import { REGIONS, TAGS } from "@/domain/types";
+import { REGION_LABELS, REGION_SLUGS, TAG_LABELS, TAG_SLUGS } from "@/domain/labels";
 import { MAX_BUDGET_REAIS } from "@/domain/search-params";
 import { cn } from "@/lib/utils";
 
 export interface SearchFormValues {
   q?: string;
-  categoria?: string;
+  perfil?: string;
   regiao?: string;
   orcamento?: string;
   ordem?: string;
@@ -34,28 +34,28 @@ export function SearchForm({
       action="/explorar"
       method="get"
       role="search"
-      aria-label="Buscar destinos e oportunidades"
+      aria-label="Buscar estações de esqui"
       className={cn(
-        "bg-paper grid gap-4 rounded-[var(--radius-card)] p-5 shadow-[0_18px_40px_-24px_rgba(31,35,38,0.45)] sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_0.8fr_auto] lg:items-end",
+        "bg-paper border-line grid gap-4 rounded-[var(--radius-card)] border p-5 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_0.8fr_auto] lg:items-end",
         className,
       )}
     >
-      <Field label="Destino ou palavra-chave" htmlFor={id("q")}>
+      <Field label="Estação, país ou região" htmlFor={id("q")}>
         <TextInput
           id={id("q")}
           name="q"
           type="search"
           maxLength={80}
           defaultValue={values.q}
-          placeholder="Ex.: Medellín, café, horta"
+          placeholder="Ex.: Zermatt, Japão, Dolomitas"
         />
       </Field>
-      <Field label="Categoria" htmlFor={id("categoria")}>
-        <Select id={id("categoria")} name="categoria" defaultValue={values.categoria ?? ""}>
-          <option value="">Todas</option>
-          {CATEGORIES.map((c) => (
-            <option key={c} value={CATEGORY_SLUGS[c]}>
-              {CATEGORY_LABELS[c]}
+      <Field label="Perfil" htmlFor={id("perfil")}>
+        <Select id={id("perfil")} name="perfil" defaultValue={values.perfil ?? ""}>
+          <option value="">Todos</option>
+          {TAGS.map((t) => (
+            <option key={t} value={TAG_SLUGS[t]}>
+              {TAG_LABELS[t]}
             </option>
           ))}
         </Select>
@@ -78,18 +78,19 @@ export function SearchForm({
           inputMode="numeric"
           min={0}
           max={MAX_BUDGET_REAIS}
-          step={10}
+          step={50}
           defaultValue={values.orcamento}
-          placeholder="Ex.: 250"
+          placeholder="Ex.: 1500"
         />
       </Field>
       {showSort ? (
         <Field label="Ordenar por" htmlFor={id("ordem")}>
-          <Select id={id("ordem")} name="ordem" defaultValue={values.ordem ?? "relevancia"}>
-            <option value="relevancia">Relevância</option>
+          <Select id={id("ordem")} name="ordem" defaultValue={values.ordem ?? "curadoria"}>
+            <option value="curadoria">Curadoria NomadFree</option>
             <option value="menor-custo">Menor custo diário</option>
             <option value="maior-custo">Maior custo diário</option>
-            <option value="melhor-trabalho-remoto">Melhor nota para trabalho remoto</option>
+            <option value="maior-altitude">Maior altitude</option>
+            <option value="maior-area">Maior área esquiável</option>
           </Select>
         </Field>
       ) : null}

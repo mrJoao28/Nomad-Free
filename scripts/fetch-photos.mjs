@@ -1,41 +1,49 @@
 #!/usr/bin/env node
 /**
- * Baixa fotos de paisagens e lugares do Wikimedia Commons (licenças livres) para
- * public/img/photos/ e grava autor, licença e link em public/img/photos/credits.json.
+ * Baixa uma foto livre de direitos para cada estação (e para o fundo da página inicial) e grava
+ * autor, licença e link em public/img/photos/credits.json.
+ *
+ * Como a foto é escolhida (sem busca por texto, para não trazer imagens erradas):
+ *   1. A imagem principal do artigo da estação na Wikipédia (campo "wiki" em photo-sources.json).
+ *   2. Se ela não servir, as outras imagens do mesmo artigo.
+ *   3. Se ainda assim faltar, as fotos da categoria do Commons (campo "commonsCategory", opcional).
+ * Cada candidata precisa estar no Wikimedia Commons com licença livre (CC BY, CC BY-SA, CC0 ou
+ * domínio público), ser JPEG em paisagem e ter largura mínima. Mapas de pistas, logos e bandeiras
+ * são descartados, e a MESMA foto nunca é usada em duas estações.
  *
  * Uso:
- *   node scripts/fetch-photos.mjs                 escolhe e baixa a melhor foto de cada chave
- *   node scripts/fetch-photos.mjs --list          só mostra as melhores candidatas (não baixa)
- *   node scripts/fetch-photos.mjs --only=cusco-peru,porto-portugal
- *   node scripts/fetch-photos.mjs --force         baixa de novo mesmo se a foto já existir
+ *   node scripts/fetch-photos.mjs              baixa as fotos que faltam
+ *   node scripts/fetch-photos.mjs --dry        só mostra a escolha, sem baixar
+ *   node scripts/fetch-photos.mjs --only=zermatt,chamonix
+ *   node scripts/fetch-photos.mjs --force      baixa de novo, mesmo se a foto já existir
+ *   node scripts/fetch-photos.mjs --report     refaz scripts/revisao-fotos.html (sem rede)
  *
- * Em scripts/photo-sources.json cada chave tem:
- *   "search": termo de busca no Commons (usado na escolha automática)
- *   "file":   título exato de um arquivo (ex.: "File:Exemplo.jpg"); se preenchido, tem prioridade
- *
- * A escolha automática prefere "Featured pictures" e "Quality images", em formato paisagem e
- * alta resolução, e só aceita licenças livres (CC BY, CC BY-SA, CC0, domínio público).
- * Confira o resultado no site; para trocar uma foto, preencha "file" e rode com --force.
- * Requer Node 22+ (fetch nativo). Sem dependências.
+ * Para trocar uma foto: copie o título de um arquivo do Commons (ex.: "File:Exemplo.jpg") para o
+ * campo "file" da estação em photo-sources.json e rode com --only=<chave> --force.
+ * Depois abra scripts/revisao-fotos.html no navegador para conferir todas as fotos de uma vez.
+ * Requer Node 18+ (fetch nativo). Sem dependências.
  */
-import { mkdir, readFile, writeFile, access } from "node:fs/promises";
+import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourcesPath = path.join(root, "scripts", "photo-sources.json");
+const reportPath = path.join(root, "scripts", "revisao-fotos.html");
 const photosDir = path.join(root, "public", "img", "photos");
 const creditsPath = path.join(photosDir, "credits.json");
 
-const API = "https://commons.wikimedia.org/w/api.php";
-const USER_AGENT = "NomadFreeDev/0.2 (projeto local de estudo; uso de fotos com atribuição)";
-const WIDTH = 1920;
-const MIN_WIDTH = 2400;
-const MIN_RATIO = 1.4;
-const MAX_RATIO = 2.4;
+const WIKI_API = "https://en.wikipedia.org/w/api.php";
+const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
+const USER_AGENT = "NomadFreeDev/0.3 (projeto local de estudo; fotos com atribuição)";
+const THUMB_WIDTH = 2400;
+const GOOD_WIDTH = 2400;
+const MIN_WIDTH = 1600;
+const MIN_RATIO = 1.2;
+const MAX_RATIO = 2.6;
 const FREE_LICENSE = /^(cc[ -]by|cc[ -]by-sa|cc0|public domain|pd)/i;
 const UNWANTED_TITLE =
-  /\b(map|mapa|flag|bandeira|coat of arms|logo|diagram|locator|plan|poster|panorama stitched|aerial photograph of the area)\b/i;
+  /\b(map|mapa|karte|carte|plan|piste|pistenplan|trail|logo|flag|coat of arms|emblem|diagram|locator|sketch|poster|timetable|route|aircraft|fighter|air base|airbase|warship)\b/i;
 
 export function stripHtml(value) {
   return String(value ?? "")
@@ -45,6 +53,42 @@ export function stripHtml(value) {
     .replace(/&#0?39;/g, "'")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+export function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+/** "File:Foo_bar.jpg" e "Foo bar.jpg" viram a mesma chave: "File:Foo bar.jpg". */
+export function normalizeTitle(title) {
+  const t = String(title).replace(/_/g, " ").trim();
+  return t.startsWith("File:") ? t : `File:${t}`;
+}
+
+export function isUnwanted(title) {
+  return UNWANTED_TITLE.test(title);
+}
+
+/**
+ * Escolhe a melhor candidata. `candidates` vem em ordem de prioridade da origem
+ * (principal do artigo, outras do artigo, categoria) e cada item tem `order`.
+ * `used` é o conjunto de títulos já usados por outras estações.
+ */
+export function rankCandidates(candidates, used = new Set()) {
+  return candidates
+    .filter((c) => c && c.mime === "image/jpeg" && FREE_LICENSE.test(c.license))
+    .filter((c) => !used.has(normalizeTitle(c.title)))
+    .filter((c) => c.width >= MIN_WIDTH && c.height > 0)
+    .filter((c) => c.width / c.height >= MIN_RATIO && c.width / c.height <= MAX_RATIO)
+    .filter((c) => !isUnwanted(c.title))
+    .map((c) => ({ ...c, tier: c.width >= GOOD_WIDTH ? 0 : 1 }))
+    .sort(
+      (a, b) => a.tier - b.tier || a.order - b.order || b.width * b.height - a.width * a.height,
+    );
 }
 
 async function readJson(file, fallback) {
@@ -64,93 +108,170 @@ async function exists(file) {
   }
 }
 
-async function api(params) {
-  const url = new URL(API);
+async function api(base, params) {
+  const url = new URL(base);
   url.search = new URLSearchParams({ format: "json", ...params }).toString();
   const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
   if (!res.ok) throw new Error(`API respondeu ${res.status}`);
   return res.json();
 }
 
-const IMAGE_PROPS = {
-  prop: "imageinfo",
-  iiprop: "url|size|mime|extmetadata",
-  iiurlwidth: String(WIDTH),
-  iiextmetadatafilter: "Artist|LicenseShortName|ObjectName",
-};
+const chunk = (list, size) =>
+  Array.from({ length: Math.ceil(list.length / size) }, (_, i) =>
+    list.slice(i * size, (i + 1) * size),
+  );
 
-function toCandidate(page) {
-  const info = page?.imageinfo?.[0];
-  if (!info) return null;
-  const meta = info.extmetadata ?? {};
-  return {
-    title: page.title,
-    rank: page.index ?? 999,
-    width: info.width ?? 0,
-    height: info.height ?? 0,
-    mime: info.mime ?? "",
-    thumburl: info.thumburl ?? info.url,
-    descriptionurl: info.descriptionurl,
-    license: stripHtml(meta.LicenseShortName?.value),
-    author: stripHtml(meta.Artist?.value) || "Autor não informado",
-    name: stripHtml(meta.ObjectName?.value),
-  };
-}
-
-/** Filtra e ordena candidatas: paisagem, alta resolução, licença livre, sem mapas/bandeiras. */
-export function pickBest(candidates) {
-  return candidates
-    .filter((c) => c && c.mime === "image/jpeg" && FREE_LICENSE.test(c.license))
-    .filter((c) => c.width >= MIN_WIDTH && c.height > 0)
-    .filter((c) => c.width / c.height >= MIN_RATIO && c.width / c.height <= MAX_RATIO)
-    .filter((c) => !UNWANTED_TITLE.test(c.title))
-    .sort((a, b) => a.rank - b.rank || b.width * b.height - a.width * a.height);
-}
-
-async function searchBest(term) {
-  const queries = [
-    `${term} incategory:"Featured pictures on Wikimedia Commons"`,
-    `${term} incategory:"Quality images"`,
-    `${term} filetype:bitmap landscape`,
-  ];
-  for (const q of queries) {
-    const data = await api({
+/** Título do artigo (como pedido) -> arquivo da imagem principal, ou null. */
+async function leadImages(wikiTitles) {
+  const result = new Map();
+  for (const batch of chunk([...new Set(wikiTitles)], 40)) {
+    const data = await api(WIKI_API, {
       action: "query",
-      generator: "search",
-      gsrsearch: q,
-      gsrnamespace: "6",
-      gsrlimit: "40",
-      ...IMAGE_PROPS,
+      prop: "pageimages",
+      piprop: "name",
+      redirects: "1",
+      converttitles: "1",
+      titles: batch.join("|"),
     });
-    const candidates = Object.values(data?.query?.pages ?? {}).map(toCandidate);
-    const best = pickBest(candidates);
-    if (best.length > 0) return best;
+    const alias = new Map(batch.map((t) => [t, t]));
+    for (const n of data?.query?.normalized ?? []) alias.set(n.from, n.to);
+    for (const r of data?.query?.redirects ?? []) {
+      for (const [from, to] of alias) if (to === r.from) alias.set(from, r.to);
+    }
+    const byTitle = new Map(Object.values(data?.query?.pages ?? {}).map((p) => [p.title, p]));
+    for (const requested of batch) {
+      const page = byTitle.get(alias.get(requested));
+      result.set(requested, page?.pageimage ? normalizeTitle(page.pageimage) : null);
+    }
   }
-  return [];
+  return result;
 }
 
-async function byTitle(title) {
-  const data = await api({
+async function articleImages(wikiTitle) {
+  const data = await api(WIKI_API, {
     action: "query",
-    titles: title.startsWith("File:") ? title : `File:${title}`,
-    ...IMAGE_PROPS,
+    prop: "images",
+    imlimit: "100",
+    redirects: "1",
+    titles: wikiTitle,
   });
   const page = Object.values(data?.query?.pages ?? {})[0];
-  const candidate = page && page.missing === undefined ? toCandidate(page) : null;
-  if (!candidate) throw new Error("arquivo não encontrado no Commons");
-  if (!FREE_LICENSE.test(candidate.license)) {
-    throw new Error(`licença "${candidate.license || "desconhecida"}" não é livre`);
+  return (page?.images ?? [])
+    .map((i) => i.title)
+    .filter((t) => /\.jpe?g$/i.test(t))
+    .map(normalizeTitle);
+}
+
+async function categoryFiles(category) {
+  const data = await api(COMMONS_API, {
+    action: "query",
+    list: "categorymembers",
+    cmtitle: category.startsWith("Category:") ? category : `Category:${category}`,
+    cmtype: "file",
+    cmlimit: "60",
+  });
+  return (data?.query?.categorymembers ?? []).map((m) => normalizeTitle(m.title));
+}
+
+/** Metadados de arquivos do Commons. Arquivos que não existem no Commons (ex.: não livres) ficam de fora. */
+async function imageInfo(fileTitles, cache) {
+  const missing = [...new Set(fileTitles.map(normalizeTitle))].filter((t) => !cache.has(t));
+  for (const batch of chunk(missing, 40)) {
+    const data = await api(COMMONS_API, {
+      action: "query",
+      prop: "imageinfo",
+      iiprop: "url|size|mime|extmetadata",
+      iiurlwidth: String(THUMB_WIDTH),
+      iiextmetadatafilter: "Artist|LicenseShortName|ObjectName",
+      titles: batch.join("|"),
+    });
+    const alias = new Map(batch.map((t) => [t, t]));
+    for (const n of data?.query?.normalized ?? []) alias.set(n.from, n.to);
+    const byTitle = new Map(Object.values(data?.query?.pages ?? {}).map((p) => [p.title, p]));
+    for (const requested of batch) {
+      const page = byTitle.get(alias.get(requested));
+      const info = page && page.missing === undefined ? page.imageinfo?.[0] : undefined;
+      if (!info) {
+        cache.set(requested, null);
+        continue;
+      }
+      const meta = info.extmetadata ?? {};
+      cache.set(requested, {
+        title: normalizeTitle(page.title),
+        width: info.width ?? 0,
+        height: info.height ?? 0,
+        mime: info.mime ?? "",
+        thumburl: info.thumburl ?? info.url,
+        descriptionurl: info.descriptionurl,
+        license: stripHtml(meta.LicenseShortName?.value),
+        author: stripHtml(meta.Artist?.value) || "Autor não informado",
+        name: stripHtml(meta.ObjectName?.value),
+      });
+    }
   }
-  if (!/^image\/(jpeg|png|webp)$/.test(candidate.mime)) {
-    throw new Error(`tipo ${candidate.mime} não suportado`);
+  return fileTitles.map((t) => cache.get(normalizeTitle(t)) ?? null);
+}
+
+/** Lista candidatas em ordem de prioridade. Lança só em falha de rede. */
+async function collectCandidates(source, lead, cache, used) {
+  const ordered = [];
+  const add = async (titles, base) => {
+    const infos = await imageInfo(titles, cache);
+    infos.forEach((info, i) => info && ordered.push({ ...info, order: base + i }));
+  };
+  const file = String(source.file ?? "").trim();
+  if (file) {
+    await add([file], 0);
+    return ordered;
   }
-  return candidate;
+  if (lead) await add([lead], 0);
+  if (rankCandidates(ordered, used).length === 0) {
+    await add(await articleImages(source.wiki), 100);
+  }
+  if (source.commonsCategory) {
+    await add(await categoryFiles(source.commonsCategory), 1000);
+  }
+  return ordered;
+}
+
+function reportHtml(entries, missing) {
+  const rows = entries
+    .map(
+      (e) => `<tr>
+  <td><img src="../public/img/photos/${escapeHtml(e.key)}.jpg" alt="" width="320" loading="lazy"></td>
+  <td><strong>${escapeHtml(e.key)}</strong><br>${escapeHtml(e.title)}<br>${escapeHtml(e.license)}<br>${escapeHtml(e.author)}<br>${
+    e.sourceUrl ? `<a href="${escapeHtml(e.sourceUrl)}">fonte</a>` : ""
+  }</td></tr>`,
+    )
+    .join("\n");
+  const miss = missing.length
+    ? `<h2>Sem foto (${missing.length})</h2><ul>${missing
+        .map((m) => `<li><strong>${escapeHtml(m.key)}</strong>: ${escapeHtml(m.reason)}</li>`)
+        .join("")}</ul>`
+    : "";
+  return `<!doctype html><html lang="pt-BR"><meta charset="utf-8"><title>Revisão das fotos</title>
+<style>body{font:14px system-ui;background:#111;color:#eee;margin:2rem}td{padding:.6rem;vertical-align:top;border-bottom:1px solid #333}a{color:#8bbfff}</style>
+<h1>Revisão das fotos (${entries.length})</h1>
+<p>Confira se cada foto mostra a estação certa. Para trocar uma, preencha "file" em scripts/photo-sources.json e rode com --only=chave --force.</p>
+<table>${rows}</table>${miss}</html>`;
+}
+
+async function writeReport(sources, credits, missing) {
+  const entries = [];
+  for (const key of Object.keys(sources)) {
+    if (credits[key] && (await exists(path.join(photosDir, `${key}.jpg`)))) {
+      entries.push({ key, ...credits[key] });
+    }
+  }
+  await writeFile(reportPath, reportHtml(entries, missing), "utf8");
+  return entries.length;
 }
 
 async function main() {
   const args = process.argv.slice(2);
-  const listOnly = args.includes("--list");
+  const dry = args.includes("--dry");
   const force = args.includes("--force");
+  const onlyReport = args.includes("--report");
   const only = args
     .find((a) => a.startsWith("--only="))
     ?.slice(7)
@@ -161,56 +282,86 @@ async function main() {
   const credits = await readJson(creditsPath, {});
   await mkdir(photosDir, { recursive: true });
 
-  for (const [key, source] of Object.entries(sources)) {
-    if (only && !only.includes(key)) continue;
-    const jpg = path.join(photosDir, `${key}.jpg`);
-    if (!force && !listOnly && (await exists(jpg))) {
-      console.log(`• ${key}: já existe (use --force para trocar)`);
-      continue;
-    }
+  if (onlyReport) {
+    const n = await writeReport(sources, credits, []);
+    console.log(`Relatório com ${n} fotos em scripts/revisao-fotos.html`);
+    return;
+  }
+
+  const keys = Object.keys(sources).filter((k) => !only || only.includes(k));
+  const todo = [];
+  for (const key of keys) {
+    if (!force && (await exists(path.join(photosDir, `${key}.jpg`)))) continue;
+    todo.push(key);
+  }
+  console.log(`${keys.length - todo.length} já existem; buscando ${todo.length}...`);
+
+  // Títulos já ocupados por fotos existentes (para nunca repetir uma foto em outra estação).
+  const used = new Set(
+    Object.entries(credits)
+      .filter(([k]) => !todo.includes(k))
+      .map(([, c]) => normalizeTitle(c.file ?? "")),
+  );
+
+  const leads = await leadImages(todo.map((k) => sources[k].wiki).filter(Boolean));
+  const cache = new Map();
+  const missing = [];
+  let ok = 0;
+
+  for (const key of todo) {
+    const source = sources[key];
     try {
-      const file = String(source.file ?? "").trim();
-      let chosen;
-      if (file) {
-        chosen = await byTitle(file);
-      } else {
-        const found = await searchBest(String(source.search ?? key.replace(/-/g, " ")));
-        if (listOnly) {
-          console.log(`\n${key}:`);
-          for (const c of found.slice(0, 5)) {
-            console.log(`  ${c.title} (${c.width}x${c.height}, ${c.license}) ${c.descriptionurl}`);
-          }
-          if (found.length === 0) console.log("  nenhuma candidata encontrada");
-          continue;
-        }
-        chosen = found[0];
-        if (!chosen) throw new Error("nenhuma candidata (paisagem, alta resolução, licença livre)");
+      const candidates = await collectCandidates(
+        source,
+        leads.get(source.wiki) ?? null,
+        cache,
+        used,
+      );
+      const best = rankCandidates(candidates, used)[0];
+      if (!best) {
+        const reason = candidates.length
+          ? "nenhuma candidata passou nos critérios (licença livre, JPEG, paisagem, largura mínima, sem repetição)"
+          : "nenhuma imagem encontrada (confira o título em 'wiki')";
+        missing.push({ key, reason });
+        console.warn(`✗ ${key}: ${reason}`);
+        continue;
       }
-      if (listOnly) continue;
-
-      const res = await fetch(chosen.thumburl, { headers: { "User-Agent": USER_AGENT } });
+      used.add(normalizeTitle(best.title));
+      const note = best.tier === 1 ? " (resolução menor que a ideal)" : "";
+      if (dry) {
+        console.log(
+          `• ${key}: ${best.title} — ${best.width}x${best.height}, ${best.license}${note}`,
+        );
+        ok += 1;
+        continue;
+      }
+      const res = await fetch(best.thumburl, { headers: { "User-Agent": USER_AGENT } });
       if (!res.ok) throw new Error(`download respondeu ${res.status}`);
-      const ext =
-        chosen.mime === "image/png" ? "png" : chosen.mime === "image/webp" ? "webp" : "jpg";
-      await writeFile(path.join(photosDir, `${key}.${ext}`), Buffer.from(await res.arrayBuffer()));
-
+      await writeFile(path.join(photosDir, `${key}.jpg`), Buffer.from(await res.arrayBuffer()));
       credits[key] = {
-        title: chosen.name || chosen.title.replace(/^File:/, ""),
-        author: chosen.author,
-        license: chosen.license,
-        sourceUrl: chosen.descriptionurl,
+        file: best.title,
+        title: best.name || best.title.replace(/^File:/, ""),
+        author: best.author,
+        license: best.license,
+        sourceUrl: best.descriptionurl,
       };
-      console.log(`✓ ${key}: ${chosen.title} — ${chosen.license}, ${chosen.author}`);
+      ok += 1;
+      console.log(`✓ ${key}: ${best.title} — ${best.license}${note}`);
     } catch (error) {
+      missing.push({ key, reason: error instanceof Error ? error.message : String(error) });
       console.warn(`✗ ${key}: ${error instanceof Error ? error.message : error}`);
     }
-    await new Promise((resolve) => setTimeout(resolve, 500)); // gentileza com a API
+    await new Promise((resolve) => setTimeout(resolve, 250)); // gentileza com a API
   }
 
-  if (!listOnly) {
+  if (!dry) {
     await writeFile(creditsPath, `${JSON.stringify(credits, null, 2)}\n`, "utf8");
-    console.log("\nCréditos salvos em public/img/photos/credits.json. Recarregue o site.");
+    await writeReport(sources, credits, missing);
   }
+  console.log(`\n${ok} fotos ${dry ? "escolhidas" : "baixadas"}, ${missing.length} sem foto.`);
+  if (!dry) console.log("Abra scripts/revisao-fotos.html no navegador para conferir.");
+  if (missing.length)
+    console.log("Para as que faltam, preencha 'file' em scripts/photo-sources.json.");
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

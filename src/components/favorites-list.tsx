@@ -1,15 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import type { CatalogItem } from "@/domain/types";
+import type { ResortItem } from "@/domain/types";
 import { favoriteId, useFavorites } from "@/lib/favorites-store";
-import { CatalogCard } from "./catalog-card";
+import { ResortCard } from "./catalog-card";
 import { buttonVariants } from "./ui/button";
 import { cn } from "@/lib/utils";
 
-export function FavoritesList({ items }: { items: CatalogItem[] }) {
+export function FavoritesList({ items }: { items: ResortItem[] }) {
   const favorites = useFavorites();
-  const saved = items.filter((i) => favorites.includes(favoriteId(i.kind, i.slug)));
+  const saved = items.filter((i) => favorites.includes(favoriteId(i.slug)));
 
   if (saved.length === 0) {
     return (
@@ -19,10 +19,10 @@ export function FavoritesList({ items }: { items: CatalogItem[] }) {
       >
         <p className="text-lg font-semibold">Você ainda não salvou nada</p>
         <p className="text-ink-soft mx-auto mt-2 max-w-md text-sm">
-          Use o botão de coração nos cards para guardar destinos e oportunidades.
+          Use o botão de coração nos cards para guardar as estações que você quer visitar.
         </p>
         <Link href="/explorar" className={cn(buttonVariants({ variant: "accent" }), "mt-6")}>
-          Explorar destinos
+          Explorar estações
         </Link>
       </div>
     );
@@ -31,8 +31,8 @@ export function FavoritesList({ items }: { items: CatalogItem[] }) {
   return (
     <ul className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3" data-testid="favorites-list">
       {saved.map((item) => (
-        <li key={`${item.kind}-${item.slug}`} className="flex">
-          <CatalogCard item={item} className="w-full" />
+        <li key={item.slug} className="flex">
+          <ResortCard item={item} className="w-full" />
         </li>
       ))}
     </ul>

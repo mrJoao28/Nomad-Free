@@ -6,14 +6,14 @@ import { useSyncExternalStore } from "react";
  * Favoritos locais ao dispositivo/navegador (localStorage). NÃO sincronizam entre
  * dispositivos e não são enviados ao servidor.
  */
-const STORAGE_KEY = "nomadfree:favorites:v1";
+const STORAGE_KEY = "nomadfree:favorites:v2";
 const EMPTY: readonly string[] = Object.freeze([]);
 
 let cache: readonly string[] | null = null;
 const listeners = new Set<() => void>();
 
-export function favoriteId(kind: "destination" | "opportunity", slug: string): string {
-  return `${kind}:${slug}`;
+export function favoriteId(slug: string): string {
+  return `resort:${slug}`;
 }
 
 function read(): readonly string[] {

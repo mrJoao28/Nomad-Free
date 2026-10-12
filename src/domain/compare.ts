@@ -1,10 +1,10 @@
 import { estimateTripBudget, type TripBudget } from "./money";
 import { slugSchema } from "./search-params";
-import type { DestinationDetail } from "./types";
+import type { ResortDetail } from "./types";
 
 export const MAX_COMPARE = 3;
-export const DEFAULT_COMPARE_DAYS = 30;
-export const MAX_COMPARE_DAYS = 365;
+export const DEFAULT_COMPARE_DAYS = 7;
+export const MAX_COMPARE_DAYS = 60;
 
 type RawParams = Record<string, string | string[] | undefined>;
 
@@ -17,7 +17,7 @@ export interface CompareQuery {
 }
 
 /**
- * Lê ?d=slug&d=slug&dias=30. Valores inválidos são ignorados (nunca lançam)
+ * Lê ?d=slug&d=slug&dias=7. Valores inválidos são ignorados (nunca lançam)
  * e listados em `ignored` para que a UI possa avisar.
  */
 export function parseCompareParams(params: RawParams): CompareQuery {
@@ -48,28 +48,37 @@ export function parseCompareParams(params: RawParams): CompareQuery {
 }
 
 export interface ComparisonRow {
-  destination: DestinationDetail;
+  resort: ResortDetail;
   budget: TripBudget;
   /** Menor custo diário entre os comparados (só quando todos usam a mesma moeda). */
   isCheapest: boolean;
-  /** Maior nota de trabalho remoto entre os comparados. */
-  isBestRemote: boolean;
+  /** Maior altitude máxima entre os comparados. */
+  isHighest: boolean;
+  /** Maior área esquiável (tamanho relativo) entre as comparadas. */
+  isLargest: boolean;
 }
 
 /**
- * Monta a comparação. Destaques só aparecem com 2+ destinos e, para custo,
- * apenas quando todos usam a mesma moeda (não convertemos moedas).
+ * Monta a comparação. Destaques só aparecem com 2+ estações e, para custo,
+ * apenas quando todas usam a mesma moeda (não convertemos moedas).
+ * Em empate, todas as empatadas são destacadas; se todas empatam, nada é destacado.
  */
-export function buildComparison(destinations: DestinationDetail[], days: number): ComparisonRow[] {
-  const sameCurrency = destinations.every((d) => d.currency === destinations[0]?.currency);
-  const minCost = Math.min(...destinations.map((d) => d.dailyBudgetMinor));
-  const maxRemote = Math.max(...destinations.map((d) => d.remoteWorkScore));
-  const multiple = destinations.length >= 2;
+export function buildComparison(resorts: ResortDetail[], days: number): ComparisonRow[] {
+  const multiple = resorts.length >= 2;
+  const sameCurrency = resorts.every((r) => r.currency === resorts[0]?.currency);
+  const minCost = Math.min(...resorts.map((r) => r.dailyBudgetMinor));
+  const maxCost = Math.max(...resorts.map((r) => r.dailyBudgetMinor));
+  const maxTop = Math.max(...resorts.map((r) => r.topElevationM));
+  const minTop = Math.min(...resorts.map((r) => r.topElevationM));
+  const maxSize = Math.max(...resorts.map((r) => r.sizeRank));
+  const minSize = Math.min(...resorts.map((r) => r.sizeRank));
 
-  return destinations.map((destination) => ({
-    destination,
-    budget: estimateTripBudget(destination.dailyBudgetMinor, days, destination.currency),
-    isCheapest: multiple && sameCurrency && destination.dailyBudgetMinor === minCost,
-    isBestRemote: multiple && destination.remoteWorkScore === maxRemote,
+  return resorts.map((resort) => ({
+    resort,
+    budget: estimateTripBudget(resort.dailyBudgetMinor, days, resort.currency),
+    isCheapest:
+      multiple && sameCurrency && minCost !== maxCost && resort.dailyBudgetMinor === minCost,
+    isHighest: multiple && maxTop !== minTop && resort.topElevationM === maxTop,
+    isLargest: multiple && maxSize !== minSize && resort.sizeRank === maxSize,
   }));
 }

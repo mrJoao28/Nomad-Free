@@ -1,22 +1,26 @@
 # NomadFree
 
-Plataforma (fase inicial) para nômades digitais: destinos econômicos, locais bons para trabalho remoto e
-oportunidades de hospedagem em troca de trabalho ou voluntariado.
+Guia de **estações de esqui e resorts** do mundo (fase inicial): 100 estações muito procuradas, com
+altitude, área esquiável, temporada, perfil e custo diário estimado. A ideia é expandir depois para
+outras áreas.
 
-> **Todo o conteúdo atual é de demonstração.** Valores, notas de trabalho remoto e condições são estimativas
-> ilustrativas e **não verificadas**. Os destinos são lugares reais, mas as oportunidades são fictícias. Nada
-> aqui representa preço, oferta ou disponibilidade reais.
+> **Todo o conteúdo atual é de demonstração.** Altitudes, áreas e temporadas são valores aproximados,
+> escritos sem verificação em tempo real; os custos são estimativas ilustrativas. A ordem das estações
+> (`curatedRank`) é uma curadoria do projeto, **não** um ranking medido. Confirme tudo no site oficial
+> de cada estação antes de planejar uma viagem.
 
 ## Funcionalidades atuais
 
-- Landing page (`/`) com hero dividido, busca, destinos em destaque, oportunidades e rodapé.
-- Exploração (`/explorar`): busca por texto (sem diferenciar acentos), filtros por categoria, região e
-  orçamento diário máximo, ordenação por relevância ou custo. Os filtros vivem na URL
-  (`?q=&categoria=&regiao=&orcamento=&ordem=`) e funcionam sem JavaScript (formulário GET).
-- Detalhes de destino (`/destinos/[slug]`): visão geral, orçamento estimado (com faixa para 7/15/30 dias),
-  informações de trabalho remoto e oportunidades relacionadas.
-- Detalhes de oportunidade (`/oportunidades/[slug]`): categoria, condições, custos estimados (inclui taxa
-  única quando houver), link externo de exemplo quando aplicável.
+- Landing page (`/`) com hero de montanha em tela cheia, busca, regiões, estações em destaque, perfis e
+  uma seção do Hemisfério Sul (temporada de junho a outubro).
+- Exploração (`/explorar`): busca por texto (sem diferenciar acentos), filtros por perfil (iniciantes,
+  família, freeride, après-ski, luxo...), região e orçamento diário máximo; ordenação por curadoria,
+  custo, altitude ou área esquiável. Os filtros vivem na URL
+  (`?q=&perfil=&regiao=&orcamento=&ordem=`) e funcionam sem JavaScript (formulário GET).
+- Página de cada estação (`/destinos/[slug]`): hero em tela cheia, números principais, visão geral,
+  orçamento estimado (faixa para 3/7/14 dias) e estações parecidas. Cada país tem a sua paleta de cores
+  (`src/domain/palettes.ts`).
+- Comparador (`/comparar`): até 3 estações lado a lado, com custo total da viagem.
 - Favoritos (`/favoritos`): **locais ao navegador** (`localStorage`). Não sincronizam entre dispositivos,
   não são enviados ao servidor e somem se os dados do navegador forem limpos.
 - Página 404, página de erro, estados de carregamento e estado vazio; textos em português do Brasil.
@@ -27,7 +31,8 @@ oportunidades de hospedagem em troca de trabalho ou voluntariado.
 
 - Dados de demonstração; nenhuma integração com APIs externas, reservas, pagamentos, scraping ou afiliados.
 - Sem autenticação e sem contas. Newsletter **não** implementada (o rodapé apenas informa isso).
-- Imagens são ilustrações SVG geradas localmente (`scripts/generate-images.mjs`), não fotografias.
+- Fotos: baixadas do Wikimedia Commons (licenças livres) pelo script `scripts/fetch-photos.mjs`; sem foto, o
+  site mostra uma silhueta de montanhas própria de cada estação. Veja `docs/FOTOS.md`.
 - Filtros e ordenação rodam em memória sobre o catálogo carregado do banco (adequado para centenas de
   registros; ver `docs/ADR-0001-arquitetura.md`).
 - O filtro de orçamento compara apenas valores em BRL; itens em outra moeda ficam fora quando o filtro está ativo.
@@ -103,7 +108,7 @@ Validadas com Zod em `src/lib/env.ts` (a aplicação falha com mensagem clara se
 
 ## Banco de dados
 
-- Modelos: `Destination` e `Opportunity` (`prisma/schema.prisma`). Não há modelo `Favorite`, pois favoritos são locais.
+- Modelo: `Resort` (`prisma/schema.prisma`). Não há modelo `Favorite`, pois favoritos são locais.
 - Dinheiro em **centavos (inteiros)** com código de moeda explícito (`currency`) e `priceKind`
   (`ESTIMATE` ou `VERIFIED` + `verifiedAt`). Todo o seed usa `ESTIMATE`.
 - Migrações versionadas em `prisma/migrations`. Aplicar: `npm run db:migrate`. Criar nova (dev): `npm run db:migrate:dev`.

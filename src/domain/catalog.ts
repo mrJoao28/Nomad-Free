@@ -1,10 +1,11 @@
-import { BUDGET_CURRENCY, type CatalogItem, type Category, type Region } from "./types";
+import { BUDGET_CURRENCY, type Region, type ResortItem, type Tag } from "./types";
 
-export type SortOrder = "relevancia" | "menor-custo" | "maior-custo" | "melhor-trabalho-remoto";
+export type SortOrder =
+  "curadoria" | "menor-custo" | "maior-custo" | "maior-altitude" | "maior-area";
 
-export interface CatalogFilters {
+export interface ResortFilters {
   q?: string;
-  category?: Category;
+  tag?: Tag;
   region?: Region;
   /** Orçamento diário máximo em centavos (moeda de referência: BRL). */
   maxDailyMinor?: number;
@@ -23,27 +24,26 @@ function tokens(q: string): string[] {
   return normalizeText(q).split(/\s+/).filter(Boolean);
 }
 
-/** Pontuação de relevância: título pesa mais que local, que pesa mais que resumo. */
-export function relevanceScore(item: CatalogItem, q?: string): number {
-  const base = item.kind === "destination" ? 1 : 0;
-  if (!q || tokens(q).length === 0) return base;
-  const title = normalizeText(item.title);
-  const location = normalizeText(item.locationLabel);
+/** Pontuação de relevância: nome pesa mais que país/região, que pesa mais que o resumo. */
+export function relevanceScore(item: ResortItem, q?: string): number {
+  if (!q || tokens(q).length === 0) return 0;
+  const name = normalizeText(item.name);
+  const place = normalizeText(`${item.country} ${item.mountainRange}`);
   const summary = normalizeText(item.summary);
   let score = 0;
   for (const token of tokens(q)) {
-    if (title.includes(token)) score += 6;
-    if (location.includes(token)) score += 3;
+    if (name.includes(token)) score += 6;
+    if (place.includes(token)) score += 3;
     if (summary.includes(token)) score += 1;
   }
-  return score > 0 ? score + base : 0;
+  return score;
 }
 
-export function filterItems(items: CatalogItem[], filters: CatalogFilters): CatalogItem[] {
+export function filterItems(items: ResortItem[], filters: ResortFilters): ResortItem[] {
   const q = filters.q?.trim();
   const hasQuery = !!q && tokens(q).length > 0;
   return items.filter((item) => {
-    if (filters.category && !item.categories.includes(filters.category)) return false;
+    if (filters.tag && !item.tags.includes(filters.tag)) return false;
     if (filters.region && item.region !== filters.region) return false;
     if (filters.maxDailyMinor !== undefined) {
       // Só comparamos valores na moeda de referência; outras moedas ficam de fora do filtro.
@@ -55,33 +55,33 @@ export function filterItems(items: CatalogItem[], filters: CatalogFilters): Cata
   });
 }
 
-export function sortItems(items: CatalogItem[], order: SortOrder, q?: string): CatalogItem[] {
+/**
+ * "curadoria" ordena por relevância da busca (quando há termo) e, em empate ou sem busca,
+ * pela posição na curadoria NomadFree.
+ */
+export function sortItems(items: ResortItem[], order: SortOrder, q?: string): ResortItem[] {
   const copy = [...items];
-  const byTitle = (a: CatalogItem, b: CatalogItem) => a.title.localeCompare(b.title, "pt-BR");
+  const byRank = (a: ResortItem, b: ResortItem) => a.curatedRank - b.curatedRank;
   switch (order) {
     case "menor-custo":
-      return copy.sort((a, b) => a.dailyCostMinor - b.dailyCostMinor || byTitle(a, b));
+      return copy.sort((a, b) => a.dailyCostMinor - b.dailyCostMinor || byRank(a, b));
     case "maior-custo":
-      return copy.sort((a, b) => b.dailyCostMinor - a.dailyCostMinor || byTitle(a, b));
-    case "melhor-trabalho-remoto":
-      // Só destinos têm nota; oportunidades vão para o fim. Desempate: mais barato, depois título.
-      return copy.sort(
-        (a, b) =>
-          (b.remoteWorkScore ?? -1) - (a.remoteWorkScore ?? -1) ||
-          a.dailyCostMinor - b.dailyCostMinor ||
-          byTitle(a, b),
-      );
-    case "relevancia":
+      return copy.sort((a, b) => b.dailyCostMinor - a.dailyCostMinor || byRank(a, b));
+    case "maior-altitude":
+      return copy.sort((a, b) => b.topElevationM - a.topElevationM || byRank(a, b));
+    case "maior-area":
+      return copy.sort((a, b) => b.sizeRank - a.sizeRank || byRank(a, b));
+    case "curadoria":
     default:
-      return copy.sort((a, b) => relevanceScore(b, q) - relevanceScore(a, q) || byTitle(a, b));
+      return copy.sort((a, b) => relevanceScore(b, q) - relevanceScore(a, q) || byRank(a, b));
   }
 }
 
-export function searchCatalog(
-  items: CatalogItem[],
-  filters: CatalogFilters,
+export function searchResorts(
+  items: ResortItem[],
+  filters: ResortFilters,
   order: SortOrder,
-): CatalogItem[] {
+): ResortItem[] {
   return sortItems(filterItems(items, filters), order, filters.q);
 }
 

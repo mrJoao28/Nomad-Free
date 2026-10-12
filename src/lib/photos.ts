@@ -4,7 +4,7 @@ import path from "node:path";
 
 /**
  * Fotos reais opcionais. Se existir `public/img/photos/<imageKey>.jpg` (ou .jpeg/.webp/.png),
- * ela substitui a ilustração SVG; sem arquivo, o site continua usando `public/img/<imageKey>.svg`.
+ * ela é usada como foto da estação; sem arquivo, o site mostra uma silhueta de montanhas.
  * Os créditos (autor, licença, link) ficam em `public/img/photos/credits.json`.
  */
 
@@ -27,15 +27,6 @@ export function findPhoto(imageKey: string): string | null {
     if (existsSync(path.join(PHOTOS_DIR, `${imageKey}.${ext}`))) {
       return `/img/photos/${imageKey}.${ext}`;
     }
-  }
-  return null;
-}
-
-/** Primeira foto existente entre as chaves (ex.: da oportunidade, depois do destino). */
-export function findFirstPhoto(...imageKeys: string[]): string | null {
-  for (const key of imageKeys) {
-    const found = findPhoto(key);
-    if (found) return found;
   }
   return null;
 }

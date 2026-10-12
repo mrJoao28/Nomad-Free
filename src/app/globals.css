@@ -6,17 +6,17 @@
  *   stone = fundo · paper = superfícies · ink = texto · fjord = cor de destaque
  */
 @theme {
-  --color-stone: #0d1014;
-  --color-paper: #151a20;
+  --color-stone: #0b1220;
+  --color-paper: #101a2c;
   --color-ink: #f3efe8;
   --color-ink-soft: #b4b9be;
-  --color-fjord: #3fb6a8;
-  --color-fjord-deep: #67c9bd;
-  --color-accent2: #e0a458;
+  --color-fjord: #6aa9ff;
+  --color-fjord-deep: #8bbfff;
+  --color-accent2: #ff7a59;
   --color-on-accent: #0b0f12;
   --color-moss: #5b6b4e;
   --color-ochre: #8f6422;
-  --color-line: #262d35;
+  --color-line: #20304b;
   --font-sans: "Avenir Next", "Segoe UI", "Helvetica Neue", Arial, system-ui, sans-serif;
   --font-display: "Avenir Next Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --radius-card: 1.25rem;

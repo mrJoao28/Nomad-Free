@@ -1,21 +1,23 @@
 import Link from "next/link";
-import type { CatalogItem } from "@/domain/types";
-import { formatMoney } from "@/domain/money";
+import type { ResortItem } from "@/domain/types";
+import { formatElevation } from "@/domain/labels";
 import { cn } from "@/lib/utils";
 import { CatalogImage } from "./catalog-image";
 import { SiteHeader } from "./site-header";
 import { buttonVariants } from "./ui/button";
 
 /**
- * Hero em tela cheia: foto de paisagem ao fundo, título grande em caixa alta e uma fileira de
- * destinos em destaque sobre a imagem. Sem foto real, usa a ilustração local como fundo.
+ * Hero em tela cheia: foto de montanha ao fundo, título grande em caixa alta e uma fileira de
+ * estações em destaque sobre a imagem. Sem foto real, usa a silhueta de montanhas como fundo.
  */
 export function Hero({
   photoSrc,
   featured,
+  total,
 }: {
   photoSrc?: string | null;
-  featured: CatalogItem[];
+  featured: ResortItem[];
+  total: number;
 }) {
   return (
     <section
@@ -24,14 +26,14 @@ export function Hero({
     >
       <div className="absolute inset-0 -z-10">
         <CatalogImage
-          imageKey="hero-fiorde"
+          imageKey="hero-home"
           photoSrc={photoSrc}
           alt=""
           priority
           sizes="100vw"
           className="scale-105"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/25 to-black/10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/20 to-black/5" />
         <div className="to-stone absolute inset-0 bg-gradient-to-b from-black/45 via-transparent" />
       </div>
 
@@ -40,26 +42,24 @@ export function Hero({
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col justify-end gap-10 px-5 pt-10 pb-12 sm:px-8 lg:flex-row lg:items-end lg:justify-between">
         <div className="max-w-3xl">
           <p className="hero-rise mb-5 max-w-sm text-sm leading-relaxed text-white/85">
-            Destinos mais acessíveis, trocas de hospedagem por trabalho e lugares bons para
-            trabalhar à distância. Conteúdo de demonstração.
+            {total} estações de esqui e resorts do mundo, com altitude, temporada, perfil e custo
+            estimado. Conteúdo de demonstração.
           </p>
           <h1
             id="hero-title"
-            className="display display-caps hero-rise text-[clamp(2.8rem,8.5vw,8rem)] [text-shadow:0_2px_30px_rgba(0,0,0,0.35)]"
+            className="display display-caps hero-rise text-[clamp(3rem,9vw,8.5rem)] [text-shadow:0_2px_30px_rgba(0,0,0,0.35)]"
             style={{ animationDelay: "120ms" }}
           >
-            Viaje leve,
+            Encontre
             <br />
-            trabalhe de
-            <br />
-            qualquer lugar.
+            onde esquiar.
           </h1>
           <div className="hero-rise mt-8 flex flex-wrap gap-3" style={{ animationDelay: "240ms" }}>
             <Link
               href="/explorar"
               className={cn(buttonVariants({ variant: "accent", size: "lg" }))}
             >
-              Explorar destinos
+              Explorar estações
             </Link>
             <Link
               href="/comparar"
@@ -75,7 +75,7 @@ export function Hero({
 
         {featured.length > 0 ? (
           <ul
-            aria-label="Destinos em destaque"
+            aria-label="Estações em destaque"
             className="hero-rise -mx-5 flex snap-x gap-4 overflow-x-auto px-5 pb-2 sm:mx-0 sm:px-0 lg:pb-0"
             style={{ animationDelay: "360ms" }}
           >
@@ -95,9 +95,9 @@ export function Hero({
                   />
                   <span className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
                   <span className="absolute inset-x-0 bottom-0 p-4">
-                    <span className="display-caps block text-xl font-bold">{item.title}</span>
+                    <span className="display-caps block text-xl font-bold">{item.name}</span>
                     <span className="mt-1 block text-xs text-white/80">
-                      {formatMoney(item.dailyCostMinor, item.currency)} / dia
+                      ▲ {formatElevation(item.topElevationM)}
                     </span>
                   </span>
                 </Link>

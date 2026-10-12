@@ -10,8 +10,8 @@ export function SiteFooter() {
             Nomad<span className="text-fjord">Free</span>
           </p>
           <p className="text-ink-soft mt-4 max-w-sm text-sm leading-relaxed">
-            Ideias de destinos acessíveis e oportunidades de hospedagem em troca de trabalho para
-            quem viaja e trabalha à distância.
+            Um guia de estações de esqui e resorts do mundo: altitude, temporada, perfil e custo
+            estimado para planejar a próxima descida.
           </p>
         </div>
         <nav aria-label="Rodapé">
@@ -54,10 +54,9 @@ export function SiteFooter() {
       <div className="border-line border-t">
         <PhotoCredits />
         <p className="text-ink-soft mx-auto max-w-7xl px-5 py-5 text-xs leading-relaxed sm:px-8">
-          Todo o conteúdo atual é de demonstração: valores e condições são estimativas ilustrativas,
-          não verificadas. Hospedagem em troca de trabalho pode exigir horas de serviço, taxas ou
-          outros custos, e não está disponível para todos. Favoritos ficam apenas neste navegador e
-          não sincronizam entre dispositivos.
+          Todo o conteúdo atual é de demonstração: altitudes, áreas, temporadas e custos são
+          aproximados e não verificados em tempo real. Confirme tudo no site oficial da estação.
+          Favoritos ficam apenas neste navegador e não sincronizam entre dispositivos.
         </p>
       </div>
     </footer>

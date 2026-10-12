@@ -1,22 +1,19 @@
 "use client";
 
 import { favoriteId, toggleFavorite, useFavorites } from "@/lib/favorites-store";
-import type { ItemKind } from "@/domain/types";
 import { cn } from "@/lib/utils";
 
 export function FavoriteButton({
-  kind,
   slug,
   title,
   className,
 }: {
-  kind: ItemKind;
   slug: string;
   title: string;
   className?: string;
 }) {
   const favorites = useFavorites();
-  const id = favoriteId(kind, slug);
+  const id = favoriteId(slug);
   const active = favorites.includes(id);
   return (
     <button
