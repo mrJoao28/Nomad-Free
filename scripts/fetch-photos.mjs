@@ -8,7 +8,7 @@
  *   2. Se ela não servir, as outras imagens do mesmo artigo.
  *   3. Se ainda assim faltar, as fotos da categoria do Commons (campo "commonsCategory", opcional).
  * Cada candidata precisa estar no Wikimedia Commons com licença livre (CC BY, CC BY-SA, CC0 ou
- * domínio público), ser JPEG em paisagem e ter largura mínima. Mapas de pistas, logos e bandeiras
+ * domínio público), ser JPEG em paisagem e ter largura mínima (1280 px). Mapas de pistas, logos e bandeiras
  * são descartados, e a MESMA foto nunca é usada em duas estações.
  *
  * Uso:
@@ -36,9 +36,10 @@ const creditsPath = path.join(photosDir, "credits.json");
 const WIKI_API = "https://en.wikipedia.org/w/api.php";
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php";
 const USER_AGENT = "NomadFreeDev/0.3 (projeto local de estudo; fotos com atribuição)";
-const THUMB_WIDTH = 2400;
-const GOOD_WIDTH = 2400;
-const MIN_WIDTH = 1600;
+// 1920 é um tamanho padrão de miniatura do Wikimedia; larguras fora dos "degraus" (ex.: 2400) são recusadas (HTTP 429).
+const THUMB_WIDTH = 1920;
+const GOOD_WIDTH = 1920;
+const MIN_WIDTH = 1280;
 const MIN_RATIO = 1.2;
 const MAX_RATIO = 2.6;
 const FREE_LICENSE = /^(cc[ -]by|cc[ -]by-sa|cc0|public domain|pd)/i;
@@ -108,11 +109,29 @@ async function exists(file) {
   }
 }
 
+/** fetch com nova tentativa para 429 e erros 5xx (respeita Retry-After). */
+async function fetchRetry(url, tries = 4) {
+  let last;
+  for (let attempt = 1; attempt <= tries; attempt += 1) {
+    try {
+      const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
+      if (res.ok) return res;
+      last = new Error(`resposta ${res.status}`);
+      if (res.status !== 429 && res.status < 500) break;
+      const wait = Number(res.headers.get("retry-after")) || attempt * 2;
+      await new Promise((resolve) => setTimeout(resolve, Math.min(wait, 15) * 1000));
+    } catch (error) {
+      last = error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 1000));
+    }
+  }
+  throw last ?? new Error("falha de rede");
+}
+
 async function api(base, params) {
   const url = new URL(base);
   url.search = new URLSearchParams({ format: "json", ...params }).toString();
-  const res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
-  if (!res.ok) throw new Error(`API respondeu ${res.status}`);
+  const res = await fetchRetry(url);
   return res.json();
 }
 
@@ -228,8 +247,13 @@ async function collectCandidates(source, lead, cache, used) {
   if (rankCandidates(ordered, used).length === 0) {
     await add(await articleImages(source.wiki), 100);
   }
-  if (source.commonsCategory) {
-    await add(await categoryFiles(source.commonsCategory), 1000);
+  // Categoria do Commons: a indicada em "commonsCategory" ou, como último recurso, a de mesmo nome do artigo.
+  if (source.commonsCategory || rankCandidates(ordered, used).length === 0) {
+    try {
+      await add(await categoryFiles(source.commonsCategory || source.wiki), 1000);
+    } catch {
+      // categoria inexistente: segue sem ela
+    }
   }
   return ordered;
 }
@@ -317,7 +341,8 @@ async function main() {
         cache,
         used,
       );
-      const best = rankCandidates(candidates, used)[0];
+      const ranked = rankCandidates(candidates, used);
+      const best = ranked[0];
       if (!best) {
         const reason = candidates.length
           ? "nenhuma candidata passou nos critérios (licença livre, JPEG, paisagem, largura mínima, sem repetição)"
@@ -326,27 +351,40 @@ async function main() {
         console.warn(`✗ ${key}: ${reason}`);
         continue;
       }
-      used.add(normalizeTitle(best.title));
-      const note = best.tier === 1 ? " (resolução menor que a ideal)" : "";
       if (dry) {
+        const note = best.tier === 1 ? " (resolução menor que a ideal)" : "";
         console.log(
           `• ${key}: ${best.title} — ${best.width}x${best.height}, ${best.license}${note}`,
         );
+        used.add(normalizeTitle(best.title));
         ok += 1;
         continue;
       }
-      const res = await fetch(best.thumburl, { headers: { "User-Agent": USER_AGENT } });
-      if (!res.ok) throw new Error(`download respondeu ${res.status}`);
-      await writeFile(path.join(photosDir, `${key}.jpg`), Buffer.from(await res.arrayBuffer()));
+      // Tenta até 5 candidatas: se o download de uma falhar, passa para a próxima.
+      let saved = null;
+      let lastError = null;
+      for (const candidate of ranked.slice(0, 5)) {
+        try {
+          const res = await fetchRetry(candidate.thumburl);
+          await writeFile(path.join(photosDir, `${key}.jpg`), Buffer.from(await res.arrayBuffer()));
+          saved = candidate;
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      if (!saved) throw lastError ?? new Error("download falhou");
+      used.add(normalizeTitle(saved.title));
+      const note = saved.tier === 1 ? " (resolução menor que a ideal)" : "";
       credits[key] = {
-        file: best.title,
-        title: best.name || best.title.replace(/^File:/, ""),
-        author: best.author,
-        license: best.license,
-        sourceUrl: best.descriptionurl,
+        file: saved.title,
+        title: saved.name || saved.title.replace(/^File:/, ""),
+        author: saved.author,
+        license: saved.license,
+        sourceUrl: saved.descriptionurl,
       };
       ok += 1;
-      console.log(`✓ ${key}: ${best.title} — ${best.license}${note}`);
+      console.log(`✓ ${key}: ${saved.title} — ${saved.license}${note}`);
     } catch (error) {
       missing.push({ key, reason: error instanceof Error ? error.message : String(error) });
       console.warn(`✗ ${key}: ${error instanceof Error ? error.message : error}`);

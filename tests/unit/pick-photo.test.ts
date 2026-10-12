@@ -23,7 +23,7 @@ const titles = (list: Candidate[]) => list.map((c) => c.title);
 describe("escolha automática de fotos", () => {
   it("prefere resolução alta e, entre iguais, a origem de maior prioridade", () => {
     const result = rankCandidates([
-      { ...base, title: "File:Baixa.jpg", width: 1800, height: 1200, order: 0 },
+      { ...base, title: "File:Baixa.jpg", width: 1500, height: 1000, order: 0 },
       { ...base, title: "File:Outra.jpg", order: 100 },
       { ...base, title: "File:Principal.jpg", order: 0 },
     ]);
@@ -34,7 +34,7 @@ describe("escolha automática de fotos", () => {
     const result = rankCandidates([
       { ...base, title: "File:Icone.png", mime: "image/png" },
       { ...base, title: "File:Nao livre.jpg", license: "All rights reserved" },
-      { ...base, title: "File:Pequena.jpg", width: 1200, height: 800 },
+      { ...base, title: "File:Pequena.jpg", width: 1000, height: 700 },
       { ...base, title: "File:Retrato.jpg", width: 2000, height: 3000 },
       { ...base, title: "File:Faixa fina.jpg", width: 9000, height: 1500 },
       { ...base, title: "File:Boa.jpg", license: "Public domain" },
